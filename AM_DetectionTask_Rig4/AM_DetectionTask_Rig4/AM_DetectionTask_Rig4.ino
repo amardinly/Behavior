@@ -1,16 +1,21 @@
 int state =1;
-bool autoReward;
-int outputLevels[12];
-int outputWeights[12];
 // state1 = autorreward (auto)
 //state 2 = max stim only (S1)
 // state 3 = add catch trials  (S2)
 // state 4 = pyschometric curve (S3)
 // state 5 = weighted psy curve (S4)
+bool Rig = true;
+bool synch = true;
+
+
+bool autoReward;
+int outputLevels[12];
+int outputWeights[12];
+
 
 
 int magOnTime = 100;  //duration of magnet on time
-int valveOpenTime = 20; //millis that the H20 valve is open
+int valveOpenTime = 30; //millis that the H20 valve is open
 int lickResponseWindow = 1000;//amount of time mice have to response
 int responseDelay = 500;  //time between stim onset and answer period
 int preTrialNoLickTime = 1000;// no licks before trial or we tgrigger a false alarm
@@ -23,6 +28,7 @@ int magnetPin = 11;
 int LEDpin = 3;
 int triggerPin = 12;
 int analogPin = 3;
+int readyToGoPin = 4;
 
 //init vars
 int thisTrialNumber = 0;
@@ -38,6 +44,7 @@ bool magnetOn = false;
 bool waterPortOpen = false;
 bool isRunning = false;
 bool debug = false;
+bool daqReady = true;
 
 int valveCloseTime = 0;  
 int nextTrialStart = 5000;  //5 sec baseline before we start stuff
@@ -118,8 +125,8 @@ void setup() {
   digitalWrite(waterPin, LOW);
   pinMode(triggerPin, OUTPUT);
   pinMode(analogPin,OUTPUT);
-  chooseParams();
-  populateTrials();
+  pinMode(readyToGoPin,INPUT);
+  chooseParams();  populateTrials();
 
   if (debug == false) {
      establishContact();
@@ -168,7 +175,10 @@ void loop() {
     falseAlarm = false;  //reset this avr
     // DID A LICK OCCUR? Y/N
     lickOccured = false;
-    if (digitalRead(lickportPin) == HIGH) {
+    if ((digitalRead(lickportPin) == LOW) && (Rig == false)) {
+      lickOccured = true;
+    }
+    if ((digitalRead(lickportPin) == HIGH) && (Rig == true)) {
       lickOccured = true;
     }
 
@@ -178,6 +188,20 @@ void loop() {
       waterPortOpen = false;
       }
 
+   //check to see if its ok to move to next trial
+   if (digitalRead(readyToGoPin)==HIGH && daqReady == false) {
+    daqReady = true;
+    // if we're just getting the ready signal, but the trial was gonna start in 500 ms
+    // give matlab a little more time to get it right
+    
+    if (nextTrialStart<=millis()+500) {
+      nextTrialStart = millis() + 500; 
+
+     // Serial.println("time extended");
+      
+    }
+   }
+   
 
     //HANDLE ISI
     
@@ -190,8 +214,12 @@ void loop() {
         }
         
         //2 - trial begins
-        if (millis()>=nextTrialStart) {
+        if (millis()>=nextTrialStart && daqReady==true) {
           // initialize trial
+          if (Rig == true && synch == true) {
+          daqReady = false;
+          }
+          
           thisTrialNumber=thisTrialNumber + 1;
           
           //SEND TRIGGER TO DAQ
