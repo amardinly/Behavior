@@ -5,7 +5,7 @@ int state =1;
 // state 4 = pyschometric curve (S3)
 // state 5 = weighted psy curve (S4)
 bool Rig = true;
-bool synch = true;
+bool synch = false;
 
 
 bool autoReward;
