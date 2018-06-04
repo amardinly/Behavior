@@ -1,9 +1,8 @@
 int state =1;
 // state1 = autorreward (auto)
-//state 2 = max stim only (S1)
-// state 3 = add catch trials  (S2)
-// state 4 = pyschometric curve (S3)
-// state 5 = weighted psy curve (S4)
+// state2 = add catch trials  (S2)
+// state3 = pyschometric curve (S3)
+// state4 = weighted psy curve (S4)
 bool Rig = true;
 bool synch = false;
 
@@ -18,8 +17,9 @@ int magOnTime = 100;  //duration of magnet on time
 int valveOpenTime = 30; //millis that the H20 valve is open
 int lickResponseWindow = 1000;//amount of time mice have to response
 int responseDelay = 500;  //time between stim onset and answer period
-int preTrialNoLickTime = 1000;// no licks before trial or we tgrigger a false alarm
-int timeOutDuration = 3000;  
+int preTrialNoLickTime = 2000;// no licks before trial or we tgrigger a false alarm
+int timeOutDurationMin = 5000;  
+int timeOutDurationMax = 8000;  
 
 //Specify pins
 int lickportPin = 5;
@@ -76,14 +76,9 @@ void chooseParams() {
           outputLevels[0] = 255;
           outputWeights[0] = 1;
       }
-      if (state==2) {
-          autoReward = false;
-          outputLevels[0] = 255;
-          outputWeights[0] = 1;
-      }
-      
+         
       //
-      if (state==3) {
+      if (state==2) {
           autoReward = false;
           outputLevels[0] = 0;
           outputLevels[1] = 255;
@@ -92,24 +87,24 @@ void chooseParams() {
       // 
       }
       //
-      if (state==4) {
+      if (state=3) {
           autoReward = false;
-          int theLevels[7] = {0,   43,   85,    128,    170,   213,  255};
-          int theWeights[7] = {1, 1, 1, 1, 1, 1, 1};
-          //for (index = 0; index < (sizeof(theWeights) / sizeof(int)); index++){
-          //  outputLevels[index] = theLevels[index];
-          //  outputWeights[index] = theWeights[index];
-          //}
+          int theLevels[8] = {0,10,21,30,43,85,128,255};
+          int theWeights[8] = {1, 1, 1, 1, 1, 1, 1, 1};
+          for (int index = 0; index < (sizeof(theWeights) / sizeof(int)); index++){
+            outputLevels[index] = theLevels[index];
+            outputWeights[index] = theWeights[index];
+          }
       }
       //
-      if (state==5) {
+      if (state==4) {
         autoReward = false;
-        int theLevels[7] = {0,   43,   85,    128,    170,   213,  255};
-        int theWeights[7] = {1, 2, 3, 4, 3, 2, 1};
-        //for (index = 0; index < (sizeof(theWeights) / sizeof(int)); index++){
-        //  outputLevels[index] = theLevels[index];
-        //  outputWeights[index] = theWeights[index];
-        //}
+         int theLevels[8] = {0,10,21,30,43,85,128,255};
+         int theWeights[8] = {1, 3, 4, 3, 2, 1, 1, 1};
+        for (int index = 0; index < (sizeof(theWeights) / sizeof(int)); index++){
+          outputLevels[index] = theLevels[index];
+          outputWeights[index] = theWeights[index];
+        }
       }
       //
 }
@@ -209,7 +204,7 @@ void loop() {
         //if we're in an inter trial interval, only two things can happen
         //1 - a false alarm
         if (nextTrialStart - (millis()) < preTrialNoLickTime && lickOccured == true) {
-              nextTrialStart = nextTrialStart + timeOutDuration;
+              nextTrialStart = nextTrialStart + random(timeOutDurationMin,timeOutDurationMax);
               falseAlarm = true;
         }
         
