@@ -29,7 +29,7 @@ bool initTrial = true;
 bool resetTrial = false;
 bool magnetOn = false;
 bool isRunning = false;
-bool debug = false;
+bool debug = true;
 bool daqReady = true;
 
 int valveCloseTime = 0;  
@@ -40,7 +40,7 @@ char val;  //data received from serial port
 
 
 //Init Exp Defaults
-int trialNumber = 50;  // num trials to allow
+const int trialNumber = 50;  // num trials to allow
 int trialStartTime = 2000;
 int stimVals[trialNumber];
 int stimDelayStart = 50;  // send a trigger to the DAQ 50 ms before stimulus
@@ -51,41 +51,13 @@ int resetTrialTime = 0;
 
 void chooseParams() {
       if (state==1) {
-          autoReward = true;
-          outputLevels[0] = 255;
-          outputWeights[0] = 1;
-      }
-         
-      //
-      if (state==2) {
-          autoReward = false;
-          outputLevels[0] = 0;
-          outputLevels[1] = 255;
-          outputWeights[0] = 1;
-          outputWeights[1] = 4;
-      // 
-      }
-      //
-      if (state=3) {
-          autoReward = false;
-          int theLevels[8] = {0,10,21,30,43,85,128,255};
-          int theWeights[8] = {1, 1, 1, 1, 1, 1, 1, 1};
-          for (int index = 0; index < (sizeof(theWeights) / sizeof(int)); index++){
-            outputLevels[index] = theLevels[index];
-            outputWeights[index] = theWeights[index];
-          }
-      }
-      //
-      if (state==4) {
-        autoReward = false;
-         int theLevels[8] = {0,10,21,30,43,85,128,255};
-         int theWeights[8] = {1, 3, 4, 3, 2, 1, 1, 1};
+         int theLevels[10] = {0,3,5,10,21,30,43,85,128,255};
+         int theWeights[10] = {1,1,1, 1, 1, 1, 1, 1, 1, 1};
         for (int index = 0; index < (sizeof(theWeights) / sizeof(int)); index++){
           outputLevels[index] = theLevels[index];
           outputWeights[index] = theWeights[index];
         }
       }
-      //
 }
 
 // the setup function runs once when you press reset or power the board
@@ -106,7 +78,6 @@ void setup() {
   if (debug == false) {
      establishContact();
   }
-
   thisTrialNumber = 0;//cant figure out where or how this gets reset....but this fixes it
 }
 
@@ -120,7 +91,6 @@ void establishContact() {
 
 // the loop function runs over and over again forever
 void loop() {
-
    //FIRST, determine if the trial is running
    //read serial input = 1 turns on the system 0 turns it off
    if (Serial.available()) {
@@ -140,7 +110,10 @@ void loop() {
   if (debug == true){ 
     isRunning = true;
   }
-    
+  if (thisTrialNumber > trialNumber){
+      isRunning=false;
+  }
+  
 
   //SECOND, if its running, do trial things.
   if (isRunning == true) {
@@ -167,9 +140,10 @@ void loop() {
         //if its time to start the trial, start it
         if (millis()>=nextTrialStart && daqReady==true) {
           // initialize trial
-          if (Rig == true && synch == true) {
-          daqReady = false;
-          }
+          //TEMP - don't use daq ready signal?
+          //if (Rig == true && synch == true) {
+          //daqReady = false;
+          //}
           
           thisTrialNumber=thisTrialNumber + 1;
           
@@ -210,26 +184,26 @@ void loop() {
  }
 
     //Serial Communicatiom
-    if (debug == false) {
+    
       Serial.print(millis() - trialStartTime);
       Serial.print(",");
       Serial.print(thisTrialNumber);
+      //Serial.print(",");
+      //Serial.print(trialRewarded);
       Serial.print(",");
-      Serial.print(trialRewarded);
-      Serial.print(",");
-      Serial.print(lickOccured);
-      Serial.print(",");
-      Serial.print(stimVals[thisTrialNumber]);
-      Serial.print(",");
-      Serial.print(isResponseWindow);
+      //Serial.print(lickOccured);
+      //Serial.print(",");
+      Serial.print(stimVals[thisTrialNumber-1]);
+      //Serial.print(",");
+      //Serial.print(isResponseWindow);
       Serial.print(",");
       Serial.print(magnetOn);
-      Serial.print(",");
-      Serial.print(waterPortOpen);
-      Serial.print(",");
-      Serial.println(falseAlarm);
-      falseAlarm = false;
-    }
+      //Serial.print(",");
+      //Serial.print(waterPortOpen);
+      //Serial.print(",");
+      //Serial.println(falseAlarm);
+      Serial.print("\n");
+    
 
   }
 
@@ -284,7 +258,6 @@ void populateTrials() {
 
     for (int n = 0; n < (sizeof(weightedOutputs) / sizeof(int)); n++) {
       stimVals[i] = weightedOutputs[n];
-      ISIDistribution[i] = random(isiMin, isiMax); //random isi distribution
       i++;
     }
 
