@@ -1,4 +1,4 @@
-int state =1;
+int state = 1;
 // state1 = autorreward (auto)
 // state2 = add catch trials  (S2)
 // state3 = pyschometric curve (S3)
@@ -68,7 +68,7 @@ int stimEndTime = 0;
 int rewardPeriodStart =0;
 int rewardPeriodEnd = 0;
 int resetTrialTime = 0;
-
+int lickCounter = 0;
 
 void chooseParams() {
       if (state==1) {
@@ -87,7 +87,7 @@ void chooseParams() {
       // 
       }
       //
-      if (state=3) {
+      if (state==3) {
           autoReward = false;
           int theLevels[8] = {0,10,21,30,43,85,128,255};
           int theWeights[8] = {1, 1, 1, 1, 1, 1, 1, 1};
@@ -169,12 +169,18 @@ void loop() {
   if (isRunning == true) {
     falseAlarm = false;  //reset this avr
     // DID A LICK OCCUR? Y/N
-    lickOccured = false;
+  //  lickOccured = false;
+           lickOccured = false;
+
+    
     if ((digitalRead(lickportPin) == LOW) && (Rig == false)) {
       lickOccured = true;
+    
     }
-    if ((digitalRead(lickportPin) == HIGH) && (Rig == true)) {
+    if ((digitalRead(lickportPin) == LOW) && (Rig == true)) {
       lickOccured = true;
+      
+      
     }
 
     //CLOSE WATER VALVE IF IT"S TIME   
@@ -262,7 +268,6 @@ void loop() {
     //  Serial.println(rewardPeriodEnd);
 
         isResponseWindow = true;        //set response window to 1
-        
         if (autoReward == true && trialRewarded == false) {  //give water at same time as magnet
           digitalWrite(waterPin, HIGH); //open the water
           valveCloseTime = millis() + valveOpenTime; //mark time to close valve
