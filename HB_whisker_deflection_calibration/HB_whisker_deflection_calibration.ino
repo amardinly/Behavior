@@ -1,7 +1,7 @@
 int state = 1;
 // state1 = basic set of strengths, 5x per strength
 bool Rig = true;
-bool synch = false;
+bool synch = true;
 
 
 int outputLevels[20];
@@ -29,7 +29,7 @@ bool initTrial = true;
 bool resetTrial = false;
 bool magnetOn = false;
 bool isRunning = false;
-bool debug = true;
+bool debug = false;
 bool daqReady = true;
 
 int valveCloseTime = 0;  
@@ -40,7 +40,7 @@ char val;  //data received from serial port
 
 
 //Init Exp Defaults
-const int trialNumber = 50;  // num trials to allow
+const int trialNumber = 100;  // num trials to allow
 int trialStartTime = 2000;
 int stimVals[trialNumber];
 int stimDelayStart = 50;  // send a trigger to the DAQ 50 ms before stimulus
@@ -160,6 +160,7 @@ void loop() {
           trialRunning = true;
           trialStartTime = millis();
           stimTime = true;
+          daqReady = false;
         }
     }
 
