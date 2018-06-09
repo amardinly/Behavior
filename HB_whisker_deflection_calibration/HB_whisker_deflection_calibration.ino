@@ -1,25 +1,16 @@
 int state = 1;
-// state1 = autorreward (auto)
-// state2 = add catch trials  (S2)
-// state3 = pyschometric curve (S3)
-// state4 = weighted psy curve (S4)
+// state1 = basic set of strengths, 5x per strength
 bool Rig = true;
 bool synch = false;
 
 
-bool autoReward;
-int outputLevels[12];
-int outputWeights[12];
+int outputLevels[20];
+int outputWeights[20];
 
 
 
 int magOnTime = 100;  //duration of magnet on time
-int valveOpenTime = 30; //millis that the H20 valve is open
-int lickResponseWindow = 1000;//amount of time mice have to response
-int responseDelay = 500;  //time between stim onset and answer period
-int preTrialNoLickTime = 2000;// no licks before trial or we tgrigger a false alarm
-int timeOutDurationMin = 5000;  
-int timeOutDurationMax = 8000;  
+int isi = 500;  //interstim interval
 
 //Specify pins
 int lickportPin = 5;
@@ -34,79 +25,39 @@ int readyToGoPin = 4;
 int thisTrialNumber = 0;
 bool stimTime = false;
 bool trialRunning = false;
-bool lickOccured = false;
-bool isResponseWindow = false;
 bool initTrial = true;
-bool trialRewarded = false;
 bool resetTrial = false;
-bool falseAlarm = false;
 bool magnetOn = false;
-bool waterPortOpen = false;
 bool isRunning = false;
-bool debug = false;
+bool debug = true;
 bool daqReady = true;
 
 int valveCloseTime = 0;  
 int nextTrialStart = 5000;  //5 sec baseline before we start stuff
 int turnOffStim = 0;
 int turnOffResponseWindow = 0;
-int cumRewards = 0;
 char val;  //data received from serial port
 
 
 //Init Exp Defaults
-int isiMin = 3000;//as in petersen paper
-int isiMax = 8000;//as in petersen paper
-int trialNumber = 1000;  // num trials to allow
+const int trialNumber = 50;  // num trials to allow
 int trialStartTime = 2000;
-int ISIDistribution[1050];  ///pad extra to prevent errors
-int stimVals[1050];
-int stopAfter_n_rewards = 10000;  //dont water that mouse too much!
+int stimVals[trialNumber];
 int stimDelayStart = 50;  // send a trigger to the DAQ 50 ms before stimulus
 int stimStartTime = 0;
 int stimEndTime = 0;
-int rewardPeriodStart =0;
-int rewardPeriodEnd = 0;
 int resetTrialTime = 0;
-int lickCounter = 0;
+
 
 void chooseParams() {
       if (state==1) {
-          autoReward = true;
-          outputLevels[0] = 255;
-          outputWeights[0] = 1;
-      }
-         
-      //
-      if (state==2) {
-          autoReward = false;
-          outputLevels[0] = 0;
-          outputLevels[1] = 255;
-          outputWeights[0] = 1;
-          outputWeights[1] = 4;
-      // 
-      }
-      //
-      if (state==3) {
-          autoReward = false;
-          int theLevels[8] = {0,10,21,30,43,85,128,255};
-          int theWeights[8] = {1, 1, 1, 1, 1, 1, 1, 1};
-          for (int index = 0; index < (sizeof(theWeights) / sizeof(int)); index++){
-            outputLevels[index] = theLevels[index];
-            outputWeights[index] = theWeights[index];
-          }
-      }
-      //
-      if (state==4) {
-        autoReward = false;
-         int theLevels[8] = {0,10,21,30,43,85,128,255};
-         int theWeights[8] = {1, 3, 4, 3, 2, 1, 1, 1};
+         int theLevels[10] = {0,3,5,10,21,30,43,85,128,255};
+         int theWeights[10] = {1,1,1, 1, 1, 1, 1, 1, 1, 1};
         for (int index = 0; index < (sizeof(theWeights) / sizeof(int)); index++){
           outputLevels[index] = theLevels[index];
           outputWeights[index] = theWeights[index];
         }
       }
-      //
 }
 
 // the setup function runs once when you press reset or power the board
@@ -123,11 +74,10 @@ void setup() {
   pinMode(readyToGoPin,INPUT);
   chooseParams();  populateTrials();
 
+
   if (debug == false) {
      establishContact();
   }
-
-
   thisTrialNumber = 0;//cant figure out where or how this gets reset....but this fixes it
 }
 
@@ -141,7 +91,6 @@ void establishContact() {
 
 // the loop function runs over and over again forever
 void loop() {
-    
    //FIRST, determine if the trial is running
    //read serial input = 1 turns on the system 0 turns it off
    if (Serial.available()) {
@@ -157,37 +106,18 @@ void loop() {
         digitalWrite(waterPin, LOW);
       }
   }
-  //end if we've exceeded the total number of rewards allowed
-  if (cumRewards >= stopAfter_n_rewards) {
-    isRunning = false;   
-  }
+  
   if (debug == true){ 
     isRunning = true;
   }
+  if (thisTrialNumber > trialNumber){
+      isRunning=false;
+  }
+  
 
   //SECOND, if its running, do trial things.
   if (isRunning == true) {
-    falseAlarm = false;  //reset this avr
-    // DID A LICK OCCUR? Y/N
-  //  lickOccured = false;
-           lickOccured = false;
 
-    
-    if ((digitalRead(lickportPin) == LOW) && (Rig == false)) {
-      lickOccured = true;
-    
-    }
-    if ((digitalRead(lickportPin) == LOW) && (Rig == true)) {
-      lickOccured = true;
-      
-      
-    }
-
-    //CLOSE WATER VALVE IF IT"S TIME   
-    if (millis() >= valveCloseTime && waterPortOpen == true) {
-      digitalWrite(waterPin, LOW); //close the water
-      waterPortOpen = false;
-      }
 
    //check to see if its ok to move to next trial
    if (digitalRead(readyToGoPin)==HIGH && daqReady == false) {
@@ -207,37 +137,25 @@ void loop() {
     //HANDLE ISI
     
     if (trialRunning == false) {
-        //if we're in an inter trial interval, only two things can happen
-        //1 - a false alarm
-        if (nextTrialStart - (millis()) < preTrialNoLickTime && lickOccured == true) {
-              nextTrialStart = nextTrialStart + random(timeOutDurationMin,timeOutDurationMax);
-              falseAlarm = true;
-        }
-        
-        //2 - trial begins
+        //if its time to start the trial, start it
         if (millis()>=nextTrialStart && daqReady==true) {
           // initialize trial
-          if (Rig == true && synch == true) {
-          daqReady = false;
-          }
+          //TEMP - don't use daq ready signal?
+          //if (Rig == true && synch == true) {
+          //daqReady = false;
+          //}
           
           thisTrialNumber=thisTrialNumber + 1;
           
           //SEND TRIGGER TO DAQ
           digitalWrite(triggerPin,HIGH); 
 
-          analogWrite(analogPin,stimVals[thisTrialNumber+1]);  //SENT VOLTAGE TO DAQ
+          analogWrite(analogPin,stimVals[thisTrialNumber-1]);  //SENT VOLTAGE TO DAQ of current trial
 
           //SET TIMER FOR STIMULUS ON
           stimStartTime = millis() + stimDelayStart; 
           stimEndTime = stimStartTime + magOnTime; 
 
-          //SET TIMER FOR REWARD PERIOD START
-          rewardPeriodStart = stimStartTime + responseDelay;
-          
-          //SET TIMER FOR REWARD PERIOD END
-          rewardPeriodEnd = rewardPeriodStart + lickResponseWindow;
-          resetTrialTime = rewardPeriodEnd + 100;
           // start the trial!
           trialRunning = true;
           trialStartTime = millis();
@@ -247,116 +165,45 @@ void loop() {
 
     //HANDLE IN TRIAL
     //  we started a trial, and now after a brief delay to allow the DAQ to receive triggers, we turn on the stimulus
-     if (millis()>= stimStartTime && trialRunning == true && stimTime == true) {
+     if (millis() >= stimStartTime && trialRunning == true && stimTime == true) {
          // end triggers to daq
          digitalWrite(triggerPin,LOW);
          analogWrite(analogPin,0);  
-         analogWrite(magnetPin,  stimVals[thisTrialNumber]);  // put voltage on the magnet
+         analogWrite(magnetPin,  stimVals[thisTrialNumber-1]);  // put voltage on the magnet
          magnetOn = true;
          stimTime = false;
      }
 
- //  turn off the magnet when it's time
+ //  turn off the magnet and end the trail when it's time
  if (millis()>= stimEndTime && trialRunning == true && magnetOn == true) {
      // end triggers to daq
      analogWrite(magnetPin,  0);  // put voltage on the magnet
      magnetOn = false;
+	trialRunning=false;
+	nextTrialStart = millis()+isi;
  }
-
- //  the reward period starts!
- if (millis()>= rewardPeriodStart && trialRunning == true && (millis()<rewardPeriodEnd))  {
-    //  Serial.println(rewardPeriodEnd);
-
-        isResponseWindow = true;        //set response window to 1
-        if (autoReward == true && trialRewarded == false) {  //give water at same time as magnet
-          digitalWrite(waterPin, HIGH); //open the water
-          valveCloseTime = millis() + valveOpenTime; //mark time to close valve
-          trialRewarded = true;
-          cumRewards++;
-          waterPortOpen = true;
-        }
-
-
-        if (autoReward == false && lickOccured == true && trialRewarded == false && stimVals[thisTrialNumber]>0) {  //give water at same time as magnet
-          digitalWrite(waterPin, HIGH); //open the water
-          valveCloseTime = millis() + valveOpenTime; //mark time to close valve
-          trialRewarded = true;
-          cumRewards++;
-          waterPortOpen = true;
-        }
- }
-
-
-if ((millis()>=rewardPeriodEnd) && isResponseWindow == true && trialRunning == true) {
-      //Serial.println("WHY");
-      isResponseWindow = false;
-   //  resetTrialTime = millis() + 100; 
-      resetTrial = true;
-      if (stimVals[thisTrialNumber] > 0 && trialRewarded == true) {
-      analogWrite(analogPin,255);  // max volatge equals a hit
-
-      }
-  
-      if (stimVals[thisTrialNumber] == 0 && trialRewarded == true) {
-    //    Serial.println("bad catch");
-      analogWrite(analogPin,0); // voltage = 0 indicated FAILED catch trial
-
-      }
-
-
-      if (stimVals[thisTrialNumber] == 0 && trialRewarded == false) {
-      analogWrite(analogPin,191); //duty cycle of 75% indicates successful catch trial
-
-      }
-
-
-
-      if (stimVals[thisTrialNumber] > 0 && trialRewarded == false) {
-     //  Serial.println("misssss");
-      analogWrite(analogPin,64); // duty cycle of 25% indicates MISS
-
-      }
-
-}
-
-if ((millis()>=resetTrialTime) && resetTrial == true && trialRunning == true) {
-
-      analogWrite(analogPin,0);  //end transmission
-      resetTrial = false;
-      trialRunning = false;
-      trialRewarded = false;
-      nextTrialStart = millis() + ISIDistribution[thisTrialNumber]; //+1000;  // set time for next trial start
-      Serial.println(nextTrialStart);
-}
-
-
-
- 
-      
-    
-
 
     //Serial Communicatiom
-    if (debug == false) {
+    
       Serial.print(millis() - trialStartTime);
       Serial.print(",");
       Serial.print(thisTrialNumber);
+      //Serial.print(",");
+      //Serial.print(trialRewarded);
       Serial.print(",");
-      Serial.print(trialRewarded);
-      Serial.print(",");
-      Serial.print(lickOccured);
-      Serial.print(",");
-      Serial.print(stimVals[thisTrialNumber]);
-      Serial.print(",");
-      Serial.print(isResponseWindow);
+      //Serial.print(lickOccured);
+      //Serial.print(",");
+      Serial.print(stimVals[thisTrialNumber-1]);
+      //Serial.print(",");
+      //Serial.print(isResponseWindow);
       Serial.print(",");
       Serial.print(magnetOn);
-      Serial.print(",");
-      Serial.print(waterPortOpen);
-      Serial.print(",");
-      Serial.println(falseAlarm);
-      falseAlarm = false;
-    }
+      //Serial.print(",");
+      //Serial.print(waterPortOpen);
+      //Serial.print(",");
+      //Serial.println(falseAlarm);
+      Serial.print("\n");
+    
 
   }
 
@@ -411,7 +258,6 @@ void populateTrials() {
 
     for (int n = 0; n < (sizeof(weightedOutputs) / sizeof(int)); n++) {
       stimVals[i] = weightedOutputs[n];
-      ISIDistribution[i] = random(isiMin, isiMax); //random isi distribution
       i++;
     }
 
