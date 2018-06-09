@@ -3,9 +3,9 @@ if nargin<2;
     plotOpt = 0;
 end
 
-path = 'X:\amardinly\BehaviorData\';
+% path = 'X:\amardinly\BehaviorData\';
 
-A = importdata([path filename '.txt'],',',2);
+A = importdata([filename],',',2);
 
 trialStarts = find(diff(A.data(:,1))<0);  %find when time goes negative
 
@@ -15,9 +15,14 @@ numberOfTrials=numberOfTrials(end);
 
 for j = 1:(numberOfTrials);  %for each trial
     trialSamples = find(A.data(:,2)==j);
-    %  thisTrialData= A.data(trialSamples,:);
+    trialSamples(end) = [];
+
     Trials(j,1) = mean(A.data(trialSamples,5));  %stimulus value
     Trials(j,2) = max(A.data(trialSamples,3));  %rewarded
+    Trials(j,3) = max(A.data(trialSamples,4) & A.data(trialSamples,6));   %licked during response window
+    
+    % 4) lick occured
+% 6) is response window
 end
 
 stimvals = unique(Trials(:,1));
@@ -28,7 +33,10 @@ for k = 1:numel(stimvals);  %for each unique stimulus
     
     PsyCurve(k,3) = (sum(Trials(:,1)==stimvals(k)));    %trial number
 end
+dataOut.Trials = Trials;
 
+
+if size(PsyCurve,2)>5;
 ft = fittype( 'a*exp(-b*x)+c', 'independent', 'x', 'dependent', 'y' );
 opts = fitoptions( 'Method', 'NonlinearLeastSquares' );
 opts.Display = 'Off';
@@ -40,10 +48,10 @@ if plotOpt;
     hold on
     plot(PsyCurve(:,1),PsyCurve(:,2),'ko')
 end
-
 dataOut.PsyCurve = PsyCurve;
 dataOut.SigFit = fitresult;
 dataOut.fitStats = gof;
+end
 
 if plotOpt
     figure()
