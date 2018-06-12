@@ -1,25 +1,25 @@
 %% Analyze entire directory of behavioral data
 D='X:\amardinly\BehaviorData\';
-BehDir = dir(D);
+BehDir = dir(D);  %directory for all behavior txt files 
 
-
+%delete non text files from our directory 
 for j = 1:size(BehDir);
     notText(j) = isempty(strfind(BehDir(j).name,'.txt'));
 end
-
 BehDir(notText) = [];
 
+%allocate struct for all data
 MasterStruct = [];
 
+
+%for each file
 for j = 1:numel(BehDir);
     
     
-    fname = BehDir(j).name;
-    
-    disp(['Analyzing ' fname]);
+    fname = BehDir(j).name;  %file name
+    disp(['Analyzing ' fname]); 
     
     [tok rem] = strtok(fname,'_');
-    
     mouse = tok;
     mouse = ['m' mouse];
     
@@ -30,8 +30,8 @@ for j = 1:numel(BehDir);
     if numel(day) == 1; day = ['0' day]; end;
     
     date=['x' year month day];
-    
-    dataOut = readBehaviorData([D fname],0);
+    dataOut = [];
+    dataOut.Trials = readBehaviorData([D fname],0);
     
     if numel(unique(dataOut.Trials(:,2))) == 1;
         autoreward = true;
