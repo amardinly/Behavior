@@ -95,60 +95,60 @@ ylim([0 1]);
 xlabel('Stim Strength');
 ylabel('Hit Rate'); 
 
-%% Analyze Subsampled PCs
-
-data=DATUM{6};
-cutoff = 100;
-
-
-stimvals = unique(batch2(:,1));
-
-for k = 1:numel(stimvals);  %for each unique stimulus
-    samples1 = find(data(1:cutoff,1)==stimvals(k));
-    samples2 = find(data(cutoff+1:end,1)==stimvals(k));
-    samples3 = find(data(:,1)==stimvals(k));
-
-    PsyCurve(k,1)=stimvals(k);  %stimulus Valus
-    PsyCurve(k,2)=mean(data(samples1,2));  % % correct (hitrate)    
-    PsyCurve(k,3)=mean(data(samples2+cutoff,2));  % % correct (hitrate)    
-    PsyCurve(k,4)=mean(data(samples3,2));
-    
-end
-
-
-% 4 = total
-% 2 = early
-% 3 = remainder
+% %% Analyze Subsampled PCs
+% 
+% data=DATUM{6};
+% cutoff = 100;
+% 
+% 
+% stimvals = unique(batch2(:,1));
+% 
+% for k = 1:numel(stimvals);  %for each unique stimulus
+%     samples1 = find(data(1:cutoff,1)==stimvals(k));
+%     samples2 = find(data(cutoff+1:end,1)==stimvals(k));
+%     samples3 = find(data(:,1)==stimvals(k));
+% 
+%     PsyCurve(k,1)=stimvals(k);  %stimulus Valus
+%     PsyCurve(k,2)=mean(data(samples1,2));  % % correct (hitrate)    
+%     PsyCurve(k,3)=mean(data(samples2+cutoff,2));  % % correct (hitrate)    
+%     PsyCurve(k,4)=mean(data(samples3,2));
+%     
+% end
+% 
+% 
+% % 4 = total
+% % 2 = early
+% % 3 = remainder
+% % 
+% % ft = fittype( 'a*exp(-b*x)+c', 'independent', 'x', 'dependent', 'y' );
+% % opts = fitoptions( 'Method', 'NonlinearLeastSquares' );
+% % opts.Display = 'Off';
+% % opts.StartPoint = [0.590222413778962 0.0704486468813598 0.973179827025178];
+% % [fitresult, gof] = fit(  PsyCurve(:,1),  PsyCurve(:,4), ft, opts );
+% % figure();
+% % plot( fitresult, PsyCurve(:,1), PsyCurve(:,4) ,'k');
+% % hold on
+% % plot(PsyCurve(:,1),PsyCurve(:,4),'ko')
+% 
+% hold on
+% 
+% h=figure()
+% plot(PsyCurve(:,1),PsyCurve(:,4),'k');  %total data
 % 
 % ft = fittype( 'a*exp(-b*x)+c', 'independent', 'x', 'dependent', 'y' );
 % opts = fitoptions( 'Method', 'NonlinearLeastSquares' );
 % opts.Display = 'Off';
 % opts.StartPoint = [0.590222413778962 0.0704486468813598 0.973179827025178];
-% [fitresult, gof] = fit(  PsyCurve(:,1),  PsyCurve(:,4), ft, opts );
-% figure();
-% plot( fitresult, PsyCurve(:,1), PsyCurve(:,4) ,'k');
-% hold on
-% plot(PsyCurve(:,1),PsyCurve(:,4),'ko')
-
-hold on
-
-h=figure()
-plot(PsyCurve(:,1),PsyCurve(:,4),'k');  %total data
-
-ft = fittype( 'a*exp(-b*x)+c', 'independent', 'x', 'dependent', 'y' );
-opts = fitoptions( 'Method', 'NonlinearLeastSquares' );
-opts.Display = 'Off';
-opts.StartPoint = [0.590222413778962 0.0704486468813598 0.973179827025178];
-[fitresult, gof] = fit(  PsyCurve(:,1),  PsyCurve(:,2), ft, opts );
-
-ft = fittype( 'a*exp(-b*x)+c', 'independent', 'x', 'dependent', 'y' );
-opts = fitoptions( 'Method', 'NonlinearLeastSquares' );
-opts.Display = 'Off';
-opts.StartPoint = [0.590222413778962 0.0704486468813598 0.973179827025178];
-[fitresult2, gof] = fit(  PsyCurve(:,1),  PsyCurve(:,3), ft, opts );
-
-hold on;
-plot(fitresult2);
-plot(fitresult);
-
-
+% [fitresult, gof] = fit(  PsyCurve(:,1),  PsyCurve(:,2), ft, opts );
+% 
+% ft = fittype( 'a*exp(-b*x)+c', 'independent', 'x', 'dependent', 'y' );
+% opts = fitoptions( 'Method', 'NonlinearLeastSquares' );
+% opts.Display = 'Off';
+% opts.StartPoint = [0.590222413778962 0.0704486468813598 0.973179827025178];
+% [fitresult2, gof] = fit(  PsyCurve(:,1),  PsyCurve(:,3), ft, opts );
+% 
+% hold on;
+% plot(fitresult2);
+% plot(fitresult);
+% 
+% 

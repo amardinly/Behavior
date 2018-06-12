@@ -33,28 +33,19 @@ for j = 1:numel(BehDir);
     dataOut = [];
     dataOut.Trials = readBehaviorData([D fname],0);
     
-    if numel(unique(dataOut.Trials(:,2))) == 1;
+    if numel(unique(dataOut.Trials(1:end-10,2))) == 1;
         autoreward = true;
     else
         autoreward= false;
     end
     
-    
-    
-    try
+
     % put data in master struct
-    
     MasterStruct.(mouse).(date).data = dataOut;
     MasterStruct.(mouse).(date).autoreward = autoreward;
-
     stats = getBehaviorStats(dataOut);
-    
     MasterStruct.(mouse).(date).stats = stats;
-    catch
-    disp(['error- could not save ' fname ' due to syntax stupidity']) 
-    end
-
-    
+ 
     % save
     save('BehaviorResults','MasterStruct');
     

@@ -3,7 +3,15 @@ function stats=getBehaviorStats(dataOut);
 Trials = dataOut.Trials;
 
 startTrial = find(Trials(:,2));
-startTrial = startTrial(1); %start looking for killer periods of inactivity after the first HIT
+
+if numel(startTrial)>10;
+startTrial = startTrial(10); %start looking for killer periods of inactivity after the 10th HIT
+else
+ 
+o=find(startTrial< size(Trials,1)/2);
+startTrial = startTrial(o(end));
+
+end
 
 qThreshold = 20;
 QuitTrial = nan;
@@ -42,27 +50,30 @@ k = find(PsyCurve(:,1)==255);
  stats.MissRate = 1-PsyCurve(k,2);
  
 k = find(PsyCurve(:,1)==0);
+
 if isempty(k);
- 
 stats.FArate = nan;
 stats.CRrate = nan;
-else
-    
+else   
 stats.FArate = PsyCurve(k,2);
-stats.CRrate = 1-PsyCurve(k,2); 
-    
+stats.CRrate = 1-PsyCurve(k,2);  
 end
+
+
+if stats.HitRate == 1;  stats.HitRate = .999; end;
+if stats.HitRate == 0;  stats.HitRate = 0.001; end;
+if stats.FArate == 1;  stats.FArate = .999; end;
+if stats.FArate == 0;  stats.FArate = 0.001; end;
+
 
 if isempty(k);
 stats.DprimeSimple = nan;
 stats.DprimeTotal =nan;
 else
 stats.DprimeSimple = norminv(stats.HitRate ) - norminv(stats.FArate);
-
 PsyCurveTemp = PsyCurve;
 PsyCurveTemp(k,:)=[];
 allStimHits = sum(PsyCurveTemp(:,2).*PsyCurveTemp(:,3))/sum(PsyCurveTemp(:,3));
-
 stats.DprimeTotal = norminv(allStimHits) - norminv(stats.FArate);
 end
 
