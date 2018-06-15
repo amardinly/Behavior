@@ -9,8 +9,12 @@ startTrial = startTrial(10); %start looking for killer periods of inactivity aft
 else
  
 o=find(startTrial< size(Trials,1)/2);
+if ~isempty(o);
 startTrial = startTrial(o(end));
-
+else
+startTrial = startTrial(1); 
+    
+end
 end
 
 qThreshold = 20;
