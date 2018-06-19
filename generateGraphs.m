@@ -195,10 +195,10 @@ for run = 1:numel(DATUM);
         
         if ~isnan(curve1);
             
-            plot(curvef(:,1),curvef(:,2),'k','LineWidth',3);
+            plot(curvef(:,1),curvef(:,2),'LineWidth',3);
             hold on;
-            plot(curve1(:,1),curve1(:,2),'r');
-            scatter(PsyCurve(:,1),PsyCurve(:,4)*100,'k');
+%             plot(curve1(:,1),curve1(:,2),'r');
+            scatter(PsyCurve(:,1),PsyCurve(:,4)*100);
             
             P50f=thresholdf(2);
             P501=threshold1(2);
@@ -353,8 +353,19 @@ for R = 1:numel(DATUM);
     JJJ=JJJ+1;
    end
 end
-hold on; plot(5:5:50,nanmean(E50Estimate',2),'k');
-hold on; plot(5:5:50,nanmean(E50Estimate',2),'k','LineWidth',4);
+%%
+opc=5:5:50;
+figure(); plot(opc,E50Estimate','color',[.4 .4 .4]);
+hold on; plot(opc,nanmean(E50Estimate',2),'k','LineWidth',4);
+xlabel('Pcnt trials with manipulation')
+ylabel('Fraction of change detectable relative to control')
+title('Estimation shifts in Detection threshold');
+ylim([0 1])
+figure(); plot(opc,SlopeEstimate','color',[.4 .4 .4]);
+hold on; plot(opc,nanmedian(SlopeEstimate',2),'k','LineWidth',4);
+xlabel('Pcnt trials with manipulation')
+title('Estimation shifts in PC Slope');
+ylabel('Fraction of change detectable relative to control')
+ylim([0 1])
 
-figure(); plot(5:5:50,SlopeEstimate','color',[.4 .4 .4]);
-hold on; plot(5:5:50,nanmedian(SlopeEstimate',2),'k','LineWidth',4);
+save('Power Calculation','E50Estimate','SlopeEstimate','opc');
