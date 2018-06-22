@@ -49,6 +49,10 @@ for k = 1:numel(stimvals);  %for each unique stimulus
 end
 
 k = find(PsyCurve(:,1)==255);
+if isempty(k);
+    k = find(PsyCurve(:,1)==250);
+end
+
 
  stats.HitRate = PsyCurve(k,2);
  stats.MissRate = 1-PsyCurve(k,2);
