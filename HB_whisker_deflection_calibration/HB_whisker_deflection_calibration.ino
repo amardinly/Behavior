@@ -4,8 +4,9 @@ bool Rig = true;
 bool synch = true;
 
 
-int outputLevels[20];
-int outputWeights[20];
+int outputLevels[25];
+int outputWeights[25];
+const int trialNumber = 50;  // num trials to allow
 
 
 
@@ -35,12 +36,10 @@ bool daqReady = true;
 int valveCloseTime = 0;  
 int nextTrialStart = 5000;  //5 sec baseline before we start stuff
 int turnOffStim = 0;
-int turnOffResponseWindow = 0;
 char val;  //data received from serial port
 
 
 //Init Exp Defaults
-const int trialNumber = 100;  // num trials to allow
 int trialStartTime = 2000;
 int stimVals[trialNumber];
 int stimDelayStart = 50;  // send a trigger to the DAQ 50 ms before stimulus
@@ -51,8 +50,16 @@ int resetTrialTime = 0;
 
 void chooseParams() {
       if (state==1) {
-         int theLevels[10] = {0,3,5,10,21,30,43,85,128,255};
-         int theWeights[10] = {1,1,1, 1, 1, 1, 1, 1, 1, 1};
+         int theLevels[10] = {0,28,56,85,113,141,170,198,226, 255};
+         int theWeights[10] = {1,1, 1, 1, 1, 1, 1, 1, 1, 1};
+        for (int index = 0; index < (sizeof(theWeights) / sizeof(int)); index++){
+          outputLevels[index] = theLevels[index];
+          outputWeights[index] = theWeights[index];
+        }
+      }
+       if (state==2) {
+         int theLevels[20] = {0,13,27,40,54,67,80,94,107,121,134,148,161,174,188,201,215,228,242,255};
+         int theWeights[20] = {1,1, 1, 1, 1, 1, 1, 1, 1, 1,1,1, 1, 1, 1, 1, 1, 1, 1, 1};
         for (int index = 0; index < (sizeof(theWeights) / sizeof(int)); index++){
           outputLevels[index] = theLevels[index];
           outputWeights[index] = theWeights[index];
@@ -73,10 +80,13 @@ void setup() {
   pinMode(analogPin,OUTPUT);
   pinMode(readyToGoPin,INPUT);
   chooseParams();  populateTrials();
-
-
+  stimVals[0] = 255;
+  
   if (debug == false) {
      establishContact();
+  }
+  for (int i=0; i < trialNumber; i++){
+  Serial.println(stimVals[i]);
   }
   thisTrialNumber = 0;//cant figure out where or how this gets reset....but this fixes it
 }
@@ -110,7 +120,7 @@ void loop() {
   if (debug == true){ 
     isRunning = true;
   }
-  if (thisTrialNumber > trialNumber){
+  if (thisTrialNumber >= trialNumber){
       isRunning=false;
   }
   
@@ -122,6 +132,7 @@ void loop() {
    //check to see if its ok to move to next trial
    if (digitalRead(readyToGoPin)==HIGH && daqReady == false) {
     daqReady = true;
+    delay(150);
     // if we're just getting the ready signal, but the trial was gonna start in 500 ms
     // give matlab a little more time to get it right
     
@@ -170,6 +181,7 @@ void loop() {
          // end triggers to daq
          digitalWrite(triggerPin,LOW);
          analogWrite(analogPin,0);  
+         Serial.println(stimVals[thisTrialNumber-1]);
          analogWrite(magnetPin,  stimVals[thisTrialNumber-1]);  // put voltage on the magnet
          magnetOn = true;
          stimTime = false;
@@ -185,7 +197,7 @@ void loop() {
  }
 
     //Serial Communicatiom
-    
+    if (false){
       Serial.print(millis() - trialStartTime);
       Serial.print(",");
       Serial.print(thisTrialNumber);
@@ -204,7 +216,7 @@ void loop() {
       //Serial.print(",");
       //Serial.println(falseAlarm);
       Serial.print("\n");
-    
+    }
 
   }
 

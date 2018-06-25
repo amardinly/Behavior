@@ -1,10 +1,10 @@
-int state = 1;
+int state = 3;
 // state1 = autorreward (auto)
 // state2 = add catch trials  (S2)
 // state3 = pyschometric curve (S3)
 // state4 = weighted psy curve (S4)
 bool Rig = true;
-bool synch = false;
+bool synch = true;
 
 
 bool autoReward;
@@ -14,7 +14,7 @@ int outputWeights[12];
 
 
 int magOnTime = 100;  //duration of magnet on time
-int valveOpenTime = 30; //millis that the H20 valve is open
+int valveOpenTime = 50; //millis that the H20 valve is open
 int lickResponseWindow = 1000;//amount of time mice have to response
 int responseDelay = 500;  //time between stim onset and answer period
 int preTrialNoLickTime = 2000;// no licks before trial or we tgrigger a false alarm
@@ -73,7 +73,7 @@ int lickCounter = 0;
 void chooseParams() {
       if (state==1) {
           autoReward = true;
-          outputLevels[0] = 255;
+          outputLevels[0] = 250;
           outputWeights[0] = 1;
       }
          
@@ -81,7 +81,7 @@ void chooseParams() {
       if (state==2) {
           autoReward = false;
           outputLevels[0] = 0;
-          outputLevels[1] = 255;
+          outputLevels[1] = 250;
           outputWeights[0] = 1;
           outputWeights[1] = 4;
       // 
@@ -89,7 +89,7 @@ void chooseParams() {
       //
       if (state==3) {
           autoReward = false;
-          int theLevels[8] = {0,10,21,30,43,85,128,255};
+          int theLevels[8] = {0,60,100,130,160,190,220,250};
           int theWeights[8] = {1, 1, 1, 1, 1, 1, 1, 1};
           for (int index = 0; index < (sizeof(theWeights) / sizeof(int)); index++){
             outputLevels[index] = theLevels[index];
@@ -99,7 +99,7 @@ void chooseParams() {
       //
       if (state==4) {
         autoReward = false;
-         int theLevels[8] = {0,10,21,30,43,85,128,255};
+         int theLevels[8] = {0,10,21,30,43,85,128,250};
          int theWeights[8] = {1, 3, 4, 3, 2, 1, 1, 1};
         for (int index = 0; index < (sizeof(theWeights) / sizeof(int)); index++){
           outputLevels[index] = theLevels[index];
@@ -166,7 +166,7 @@ void loop() {
   }
 
   //SECOND, if its running, do trial things.
-  if (isRunning == true) {
+if (isRunning == true) {
     falseAlarm = false;  //reset this avr
     // DID A LICK OCCUR? Y/N
   //  lickOccured = false;
@@ -177,7 +177,7 @@ void loop() {
       lickOccured = true;
     
     }
-    if ((digitalRead(lickportPin) == LOW) && (Rig == true)) {
+    if ((digitalRead(lickportPin) == HIGH ) && (Rig == true)) {
       lickOccured = true;
       
       
