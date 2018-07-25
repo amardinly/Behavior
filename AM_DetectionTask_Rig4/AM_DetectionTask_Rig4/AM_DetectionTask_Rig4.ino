@@ -29,6 +29,7 @@ int LEDpin = 3;
 int triggerPin = 12;
 int analogPin = 3;
 int readyToGoPin = 4;
+int digOutPin = 7;
 
 //init vars
 int thisTrialNumber = 0;
@@ -45,6 +46,8 @@ bool waterPortOpen = false;
 bool isRunning = false;
 bool debug = false;
 bool daqReady = true;
+bool catchFA = false;
+bool pulsing = false;
 
 int valveCloseTime = 0;  
 int nextTrialStart = 5000;  //5 sec baseline before we start stuff
@@ -69,6 +72,9 @@ int rewardPeriodStart =0;
 int rewardPeriodEnd = 0;
 int resetTrialTime = 0;
 int lickCounter = 0;
+int pulsesSent = 0;
+int nextPulseTime = 0;
+int nextStimIdx = 0;
 
 void chooseParams() {
       if (state==1) {
@@ -121,7 +127,10 @@ void setup() {
   pinMode(triggerPin, OUTPUT);
   pinMode(analogPin,OUTPUT);
   pinMode(readyToGoPin,INPUT);
+  pinMode(digOutPin,OUTPUT);
+
   chooseParams();  populateTrials();
+  //Serial.println("A");
 
   if (debug == false) {
      establishContact();
@@ -148,13 +157,32 @@ void loop() {
       val = Serial.read();
       if (val == '1')  {
         isRunning = true;
+        daqReady = true;
         //nextTrialStart = nextTrialStart + 5000;
       }
   
       if (val == '0') {
         isRunning = false;
+       
         analogWrite(magnetPin, 0); // make sure mag and water are closed
         digitalWrite(waterPin, LOW);
+      }
+
+      if (val == '2' & isRunning == false) {
+        waterPortOpen = true;
+        valveCloseTime = millis() + valveOpenTime*2; 
+        if (nextTrialStart<=millis()+1500) {
+          nextTrialStart = millis() + 1500; 
+        }
+        digitalWrite(waterPin, HIGH);
+      }
+      if (val == '3' & isRunning == false) {
+        magnetOn = true;
+        stimEndTime = millis() + 300; 
+        if (nextTrialStart<=millis()+1500) {
+          nextTrialStart = millis() + 1500; 
+        }
+        analogWrite(magnetPin,  250);
       }
   }
   //end if we've exceeded the total number of rewards allowed
@@ -165,6 +193,17 @@ void loop() {
     isRunning = true;
   }
 
+
+  if (millis() >= valveCloseTime && waterPortOpen == true) {
+      digitalWrite(waterPin, LOW); //close the water
+      waterPortOpen = false;
+  }
+
+  //  turn off the magnet when it's time
+  if (millis()>= stimEndTime && magnetOn == true) {
+     analogWrite(magnetPin,  0);  // put voltage on the magnet
+     magnetOn = false;
+ }
   //SECOND, if its running, do trial things.
 if (isRunning == true) {
     falseAlarm = false;  //reset this avr
@@ -182,12 +221,6 @@ if (isRunning == true) {
       
       
     }
-
-    //CLOSE WATER VALVE IF IT"S TIME   
-    if (millis() >= valveCloseTime && waterPortOpen == true) {
-      digitalWrite(waterPin, LOW); //close the water
-      waterPortOpen = false;
-      }
 
    //check to see if its ok to move to next trial
    if (digitalRead(readyToGoPin)==HIGH && daqReady == false) {
@@ -228,9 +261,21 @@ if (isRunning == true) {
 
           analogWrite(analogPin,stimVals[thisTrialNumber+1]);  //SENT VOLTAGE TO DAQ
 
+          //find the index of the next stim to find 
+          int wantedval = stimVals[thisTrialNumber+1];
+          for (int i=0; i < (sizeof(outputLevels) / sizeof(int)); i++) {
+             if (wantedval == outputLevels[i]) {
+               nextStimIdx = i+1;
+               break;
+             }
+          }
+
           //SET TIMER FOR STIMULUS ON
           stimStartTime = millis() + stimDelayStart; 
           stimEndTime = stimStartTime + magOnTime; 
+
+          //TIMER FOR PULSING
+          nextPulseTime = millis() + stimDelayStart;
 
           //SET TIMER FOR REWARD PERIOD START
           rewardPeriodStart = stimStartTime + responseDelay;
@@ -254,14 +299,30 @@ if (isRunning == true) {
          analogWrite(magnetPin,  stimVals[thisTrialNumber]);  // put voltage on the magnet
          magnetOn = true;
          stimTime = false;
+         // try ultra-fast pulsing
+         //for (int pulses = 0; pulses < stimVals[thisTrialNumber+1]; pulses++){
+         //   digitalWrite(digOutPin, HIGH);
+         //   delay(1);
+         //   digitalWrite(digOutPin, LOW);
+         //   delay(1);
+         // }
+     }
+         //if a trial has started, begin sending the digital pulses to tell the DAQ whats up
+     if (millis() >= nextPulseTime && pulsesSent <= nextStimIdx && trialRunning == true){
+      if (pulsing == true){ //if its currently on, turn it off
+        digitalWrite(digOutPin, LOW);
+        nextPulseTime = millis() + 2;
+        pulsesSent++;
+        pulsing = false;
+      } else{
+        digitalWrite(digOutPin, HIGH);
+        nextPulseTime = millis()+2;
+        pulsing = true;      
+      }
      }
 
- //  turn off the magnet when it's time
- if (millis()>= stimEndTime && trialRunning == true && magnetOn == true) {
-     // end triggers to daq
-     analogWrite(magnetPin,  0);  // put voltage on the magnet
-     magnetOn = false;
- }
+     
+
 
  //  the reward period starts!
  if (millis()>= rewardPeriodStart && trialRunning == true && (millis()<rewardPeriodEnd))  {
@@ -284,6 +345,9 @@ if (isRunning == true) {
           cumRewards++;
           waterPortOpen = true;
         }
+        else if (stimVals[thisTrialNumber] == 0 && lickOccured == true){
+          catchFA = true;
+        }
  }
 
 
@@ -293,27 +357,45 @@ if ((millis()>=rewardPeriodEnd) && isResponseWindow == true && trialRunning == t
    //  resetTrialTime = millis() + 100; 
       resetTrial = true;
       if (stimVals[thisTrialNumber] > 0 && trialRewarded == true) {
-      analogWrite(analogPin,255);  // max volatge equals a hit
+         for (int pulses = 0; pulses < 4; pulses++){
+            digitalWrite(digOutPin, HIGH);
+            delay(10);
+            digitalWrite(digOutPin, LOW);
+            delay(10);
+         }
 
       }
   
-      if (stimVals[thisTrialNumber] == 0 && trialRewarded == true) {
-    //    Serial.println("bad catch");
-      analogWrite(analogPin,0); // voltage = 0 indicated FAILED catch trial
+      if (stimVals[thisTrialNumber] == 0 && catchFA == true) {
+         for (int pulses = 0; pulses < 1; pulses++){
+            digitalWrite(digOutPin, HIGH);
+            delay(10);
+            digitalWrite(digOutPin, LOW);
+            delay(10);
+         }
 
       }
 
 
-      if (stimVals[thisTrialNumber] == 0 && trialRewarded == false) {
-      analogWrite(analogPin,191); //duty cycle of 75% indicates successful catch trial
+      if (stimVals[thisTrialNumber] == 0 && catchFA == false) {
+         for (int pulses = 0; pulses < 2; pulses++){
+            digitalWrite(digOutPin, HIGH);
+            delay(10);
+            digitalWrite(digOutPin, LOW);
+            delay(10);
+          }
 
       }
 
 
 
       if (stimVals[thisTrialNumber] > 0 && trialRewarded == false) {
-     //  Serial.println("misssss");
-      analogWrite(analogPin,64); // duty cycle of 25% indicates MISS
+         for (int pulses = 0; pulses < 3; pulses++){
+            digitalWrite(digOutPin, HIGH);
+            delay(10);
+            digitalWrite(digOutPin, LOW);
+            delay(10);
+         }
 
       }
 
@@ -325,6 +407,9 @@ if ((millis()>=resetTrialTime) && resetTrial == true && trialRunning == true) {
       resetTrial = false;
       trialRunning = false;
       trialRewarded = false;
+      catchFA = false;
+      pulsesSent = 0;
+      nextStimIdx = 0;
       nextTrialStart = millis() + ISIDistribution[thisTrialNumber]; //+1000;  // set time for next trial start
       Serial.println(nextTrialStart);
 }
@@ -338,7 +423,7 @@ if ((millis()>=resetTrialTime) && resetTrial == true && trialRunning == true) {
 
     //Serial Communicatiom
     if (debug == false) {
-      Serial.print(millis() - trialStartTime);
+      Serial.print(millis());//millis() - trialStartTime);
       Serial.print(",");
       Serial.print(thisTrialNumber);
       Serial.print(",");
