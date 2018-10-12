@@ -1,8 +1,12 @@
-function stats=getBehaviorStats(dataOut);
+function stats=getBehaviorStats(Trials, do_chop);
 
-Trials = dataOut.Trials;
 
 startTrial = find(Trials(:,2));
+if isempty(startTrial)
+    stats = []
+    disp('no hit trials')
+    return
+end
 
 if numel(startTrial)>10;
 startTrial = startTrial(10); %start looking for killer periods of inactivity after the 10th HIT
@@ -20,25 +24,26 @@ end
 qThreshold = 20;
 QuitTrial = nan;
 
-%go through all trials - find 20 consecutive trials with NO LICKs 
-q = 0;
-for j = startTrial:size(Trials,1);
-   if Trials(j,4)==0; %if no licks
-       q=q+1;
-   else %if lick, reset
-       q=0;
-   end
-   
-   if q>=qThreshold;
-      QuitTrial = j-qThreshold-1;  
-      break
-   end
-end
+if do_chop
+    %go through all trials - find 20 consecutive trials with NO LICKs 
+    q = 0;
+    for j = startTrial:size(Trials,1);
+       if Trials(j,4)==0; %if no licks
+           q=q+1;
+       else %if lick, reset
+           q=0;
+       end
 
-if ~isnan(QuitTrial);
-   Trials=Trials(1:QuitTrial,:);    
-end
+       if q>=qThreshold;
+          QuitTrial = j-qThreshold-1;  
+          break
+       end
+    end
 
+    if ~isnan(QuitTrial);
+       Trials=Trials(1:QuitTrial,:);    
+    end
+end
 
 stimvals = unique(Trials(:,1));
 for k = 1:numel(stimvals);  %for each unique stimulus
@@ -85,7 +90,7 @@ allStimHits = sum(PsyCurveTemp(:,2).*PsyCurveTemp(:,3))/sum(PsyCurveTemp(:,3));
 stats.DprimeTotal = norminv(allStimHits) - norminv(stats.FArate);
 end
 
-stats.nTrials = size(dataOut.Trials,1);
+stats.nTrials = size(Trials,1);
 stats.psy = PsyCurve;
 
 % 
