@@ -15,6 +15,11 @@ public void updatePerformance() {
 }
 
 
+public void updatePerformanceCatch() {
+  Textfield txt = ((Textfield)cp5.getController("FAP"));
+  txt.setValue(""+(faCatchTally/(faCatchTally+crTally)));
+}
+
 public void updatePerformanceMISS() {
   Textfield txt = ((Textfield)cp5.getController("Miss"));
   txt.setValue(""+missTally);

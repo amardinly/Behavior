@@ -1,4 +1,3 @@
-
 public void updateBehaviorStats() {
   
 
@@ -13,19 +12,30 @@ public void updateBehaviorStats() {
       if (thisTrialNumber>previousTrialNumber) {
     
         
-        if (hitTrial) {
-        hitTally++;
-        BinnedHitTally++;
-       // println(BinnedHitTally);
-
+        if (isCatchTrial) {
+          if(licked) {
+            faCatchTally ++;
+          }
+          else {
+            crTally++;
+          }
         }
-        else {
-        missTally++;  
-        BinnedMissTally++;
-      //  println(BinnedMissTally);
+        else{
+          if(licked) {
+          hitTally++;
+          BinnedHitTally++;
+         // println(BinnedHitTally);
+  
+          }
+          else {
+          missTally++;  
+          BinnedMissTally++;
+        //  println(BinnedMissTally);
+          }
         }
       
-      hitTrial = false;
+      isCatchTrial = false;
+      licked = false;
       previousTrialNumber = thisTrialNumber;
      // BinCrimenter++;
       }
@@ -34,9 +44,13 @@ public void updateBehaviorStats() {
       
       {
       }
-  
-     //its a hit if the trial is ever rewarded 
-     if (lickOccured>0 && isResponseWindow>0) { 
-     hitTrial = true;  
+      
+      lastStim = stimVoltage;
+      if (stimVoltage == 0){
+        isCatchTrial = true;
+      }
+     //
+     if(lickOccured>0 && isResponseWindow>0) { 
+       licked = true;  
      }
 }

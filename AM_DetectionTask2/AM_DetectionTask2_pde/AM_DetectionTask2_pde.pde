@@ -1,5 +1,4 @@
-
-import processing.serial.*; //import the Serial library
+import processing.serial.*; //import the Serial library //<>//
  Serial myPort;  //the Serial port object
  String val;
 // since we're doing serial handshaking, 
@@ -23,7 +22,7 @@ import org.gicentre.utils.io.*;
 import org.gicentre.utils.*;
 import org.gicentre.utils.text.*;
 import org.gicentre.utils.network.*;
-import processing.serial.*;    // import the Processing serial library //<>// //<>// //<>//
+import processing.serial.*;    // import the Processing serial library //<>// //<>// //<>// //<>// //<>//
 import controlP5.*;
 ControlP5 cp5;
 controlP5.Button b;
@@ -38,7 +37,7 @@ float BinnedMissTally=0;
 float BinSize=10;
 int BinCrimenter = 0;
        
-int serialPortNo = 2; //1 for tablets/windows, 5 for Mac
+int serialPortNo = 1; //1 for tablets/windows, 5 for Mac
 int screenStepSize =2; //2 for windows desktop 5 for tablets
 int num = 200; //length of data to be displayed 200 for desktop, 100 for tablet
 int tickHeight = 15; // Height of continous recording data 
@@ -50,8 +49,8 @@ float catchTrial;
 float countTrialTally=0;
 float countStim=0;
 boolean StimTrial = false;
-        
-String BoxNo = "RIG"; //Change box number to keep track of training rig being used
+
+String BoxNo = "2a"; //Change box number to keep track of training rig being used
 String currPath = "C:/BehaviorDATA/"; //D drive used on tablets
 String currFolder = currPath;
               
@@ -70,7 +69,7 @@ int myReward[] = new int[num]; //licking right
 int xPos=0; //current x position
               
       
-              
+          
               
               
               
@@ -81,8 +80,16 @@ int xPos=0; //current x position
               
               //Alan's variables
               float[] magVolts = {
-                0,    43,    85,   128,   170,   213,   255
+               0,60,100,130,160,190,220,250
               };
+              float[] hitByStim = {
+               0,0,0,0,0,0,0,0
+              };
+              
+              float[] missByStim = {
+               0,0,0,0,0,0,0,0
+              };
+              float lastStim;
               
               float waterPortOpen=0;
               float magnetOn=0;
@@ -94,7 +101,9 @@ int xPos=0; //current x position
               float falseAlarm=0;
               boolean hitTrial = false;
               
-
+            //hayleys vars
+            boolean isCatchTrial = false;
+            boolean licked = false;
               
             // initialize variable to store cummulative performance
             float hitTally = 0;
@@ -117,6 +126,8 @@ int xPos=0; //current x position
             float BinnedfalseAlarmTallyStim = 0;
             
             float catchTrialTally = 0;
+            float faCatchTally = 0;
+            float crTally = 0;
             
             
             
@@ -149,7 +160,7 @@ int xPos=0; //current x position
               PVector center = new PVector(ScreenSizeW*0.3, ScreenSizeH*0.60);
 
 
-
+int start_time;      // Add a holder for the startup time in milliseconds
 
 
 
@@ -180,6 +191,7 @@ int xPos=0; //current x position
 
 
 void setup() {
+  //start_time=millis(); 
 size(800, 700); //from600
                 background(0);
                 smooth();
@@ -257,7 +269,20 @@ size(800, 700); //from600
                 .getCaptionLabel().align(ControlP5.CENTER, ControlP5.CENTER)
                 .setVisible(true)
                 ;  
-            
+               
+               cp5.addToggle("WaterPrompt")
+                .setPosition(ScreenSizeW*0.25, ScreenSizeH*0.45)
+                .setSize(sizeTextBoxW/2, sizeTextBoxH)
+                .getCaptionLabel().align(ControlP5.CENTER, ControlP5.CENTER)
+                .setVisible(true)
+                ;  
+                
+               cp5.addToggle("MagnetPulse")
+                .setPosition(ScreenSizeW*0.25, ScreenSizeH*0.3)
+                .setSize(sizeTextBoxW/2, sizeTextBoxH)
+                .getCaptionLabel().align(ControlP5.CENTER, ControlP5.CENTER)
+                .setVisible(true)
+                ;  
             
             
             
@@ -367,6 +392,18 @@ size(800, 700); //from600
                 .getCaptionLabel()
                 .setFont(font)
                 ;
+                cp5.addTextfield("FAP")
+                .setColor(color(0, 0, 255))
+                .setColorBackground(255)
+                .setPosition(ScreenSizeW*0.8, ScreenSizeH*0.35)
+                .setSize(sizeTextBoxW/4, sizeTextBoxH)
+                .setDecimalPrecision(2)
+                .setAutoClear(false)
+                .setVisible(true)
+                .setFont(font2)
+                .getCaptionLabel()
+                .setFont(font)
+                ;
                 
                 
                 
@@ -374,7 +411,7 @@ size(800, 700); //from600
                 .setColor(color(255, 255, 255))
                 .setColorBackground(255)
                 .setPosition(ScreenSizeW*0.8, ScreenSizeH*0.15)
-                .setSize(sizeTextBoxW/4, sizeTextBoxH)
+                .setSize(sizeTextBoxW/2, sizeTextBoxH)
                 .setAutoClear(false)
                 .setVisible(true)
                 .setFont(font2)
@@ -419,7 +456,7 @@ size(800, 700); //from600
                 
                 
                 
-  myPort = new Serial(this, Serial.list()[5], 9600);
+    myPort = new Serial(this, Serial.list()[6], 9600);
   myPort.bufferUntil('\n'); 
 }
 void draw() {
@@ -441,6 +478,7 @@ void draw() {
               updatePerformanceMISS();
               updatePerformanceFA();
               updatePerformanceHIT();
+              updatePerformanceCatch();
                 
                 //bar chart of performance
               barChart.draw(ScreenSizeW*0.6, ScreenSizeH*(startingHeightChart), BinWidth, BinHeight);
@@ -486,6 +524,5 @@ void draw() {
            
  
               drawLines(); 
-  
   
 }
