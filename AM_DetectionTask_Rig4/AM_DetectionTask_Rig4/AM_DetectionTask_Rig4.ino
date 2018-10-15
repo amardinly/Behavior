@@ -30,6 +30,7 @@ int triggerPin = 12;
 int analogPin = 3;
 int readyToGoPin = 4;
 int digOutPin = 7;
+int stimIndicatorPin = 13;
 
 //init vars
 int thisTrialNumber = 0;
@@ -95,8 +96,8 @@ void chooseParams() {
       //
       if (state==3) {
           autoReward = false;
-          int theLevels[8] = {0,60,100,130,160,190,220,250};
-          int theWeights[8] = {1, 1, 1, 1, 1, 1, 1, 1};
+          int theLevels[6]={0,20,    60,   100,   140,   180};//{0,60,100,130,160,190,220,250};
+          int theWeights[6] = {1, 1, 1, 1, 1, 1};
           for (int index = 0; index < (sizeof(theWeights) / sizeof(int)); index++){
             outputLevels[index] = theLevels[index];
             outputWeights[index] = theWeights[index];
@@ -128,6 +129,7 @@ void setup() {
   pinMode(analogPin,OUTPUT);
   pinMode(readyToGoPin,INPUT);
   pinMode(digOutPin,OUTPUT);
+  pinMode(stimIndicatorPin,OUTPUT);
 
   chooseParams();  populateTrials();
   //Serial.println("A");
@@ -201,7 +203,8 @@ void loop() {
 
   //  turn off the magnet when it's time
   if (millis()>= stimEndTime && magnetOn == true) {
-     analogWrite(magnetPin,  0);  // put voltage on the magnet
+     analogWrite(magnetPin, 0);  // put voltage on the magnet
+     digitalWrite(stimIndicatorPin, LOW);
      magnetOn = false;
  }
   //SECOND, if its running, do trial things.
@@ -258,18 +261,19 @@ if (isRunning == true) {
           
           //SEND TRIGGER TO DAQ
           digitalWrite(triggerPin,HIGH); 
-
           analogWrite(analogPin,stimVals[thisTrialNumber+1]);  //SENT VOLTAGE TO DAQ
 
           //find the index of the next stim to find 
           int wantedval = stimVals[thisTrialNumber+1];
+          
           for (int i=0; i < (sizeof(outputLevels) / sizeof(int)); i++) {
              if (wantedval == outputLevels[i]) {
-               nextStimIdx = i+1;
+               nextStimIdx = i;
                break;
              }
           }
-
+          //add one bc matlab indexing is like that
+          nextStimIdx = nextStimIdx++;
           //SET TIMER FOR STIMULUS ON
           stimStartTime = millis() + stimDelayStart; 
           stimEndTime = stimStartTime + magOnTime; 
@@ -297,6 +301,7 @@ if (isRunning == true) {
          digitalWrite(triggerPin,LOW);
          analogWrite(analogPin,0);  
          analogWrite(magnetPin,  stimVals[thisTrialNumber]);  // put voltage on the magnet
+         digitalWrite(stimIndicatorPin,HIGH);
          magnetOn = true;
          stimTime = false;
          // try ultra-fast pulsing
@@ -310,11 +315,13 @@ if (isRunning == true) {
          //if a trial has started, begin sending the digital pulses to tell the DAQ whats up
      if (millis() >= nextPulseTime && pulsesSent <= nextStimIdx && trialRunning == true){
       if (pulsing == true){ //if its currently on, turn it off
+        
         digitalWrite(digOutPin, LOW);
         nextPulseTime = millis() + 2;
         pulsesSent++;
         pulsing = false;
       } else{
+        
         digitalWrite(digOutPin, HIGH);
         nextPulseTime = millis()+2;
         pulsing = true;      
@@ -350,21 +357,12 @@ if (isRunning == true) {
         }
  }
 
-
+//send behavior outcome triggers. 1=FA,2=CR,3=MS,4=HT
 if ((millis()>=rewardPeriodEnd) && isResponseWindow == true && trialRunning == true) {
-      //Serial.println("WHY");
+      
       isResponseWindow = false;
-   //  resetTrialTime = millis() + 100; 
       resetTrial = true;
-      if (stimVals[thisTrialNumber] > 0 && trialRewarded == true) {
-         for (int pulses = 0; pulses < 4; pulses++){
-            digitalWrite(digOutPin, HIGH);
-            delay(10);
-            digitalWrite(digOutPin, LOW);
-            delay(10);
-         }
-
-      }
+      
   
       if (stimVals[thisTrialNumber] == 0 && catchFA == true) {
          for (int pulses = 0; pulses < 1; pulses++){
@@ -399,6 +397,16 @@ if ((millis()>=rewardPeriodEnd) && isResponseWindow == true && trialRunning == t
 
       }
 
+      if (stimVals[thisTrialNumber] > 0 && trialRewarded == true) {
+         for (int pulses = 0; pulses < 4; pulses++){
+            digitalWrite(digOutPin, HIGH);
+            delay(10);
+            digitalWrite(digOutPin, LOW);
+            delay(10);
+         }
+
+      }
+
 }
 
 if ((millis()>=resetTrialTime) && resetTrial == true && trialRunning == true) {
@@ -411,7 +419,7 @@ if ((millis()>=resetTrialTime) && resetTrial == true && trialRunning == true) {
       pulsesSent = 0;
       nextStimIdx = 0;
       nextTrialStart = millis() + ISIDistribution[thisTrialNumber]; //+1000;  // set time for next trial start
-      Serial.println(nextTrialStart);
+      
 }
 
 
@@ -423,7 +431,7 @@ if ((millis()>=resetTrialTime) && resetTrial == true && trialRunning == true) {
 
     //Serial Communicatiom
     if (debug == false) {
-      Serial.print(millis());//millis() - trialStartTime);
+      Serial.print(nextStimIdx);//millis() - trialStartTime);
       Serial.print(",");
       Serial.print(thisTrialNumber);
       Serial.print(",");
