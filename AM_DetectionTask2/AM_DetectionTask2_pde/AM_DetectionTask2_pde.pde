@@ -23,7 +23,7 @@ import org.gicentre.utils.*;
 import org.gicentre.utils.text.*;
 import org.gicentre.utils.network.*;
 import processing.serial.*;    // import the Processing serial library //<>// //<>// //<>// //<>// //<>//
-import controlP5.*;
+import controlP5.*; //<>//
 ControlP5 cp5;
 controlP5.Button b;
 DropdownList d1, d2;
@@ -456,7 +456,7 @@ size(800, 700); //from600
                 
                 
                 
-    myPort = new Serial(this, Serial.list()[6], 9600);
+    myPort = new Serial(this, Serial.list()[5], 14400);
   myPort.bufferUntil('\n'); 
 }
 void draw() {

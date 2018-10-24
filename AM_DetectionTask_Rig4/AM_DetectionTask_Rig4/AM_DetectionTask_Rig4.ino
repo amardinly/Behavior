@@ -160,7 +160,7 @@ void loop() {
       if (val == '1')  {
         isRunning = true;
         daqReady = true;
-        //nextTrialStart = nextTrialStart + 5000;
+        nextTrialStart = nextTrialStart + 5000;
       }
   
       if (val == '0') {
