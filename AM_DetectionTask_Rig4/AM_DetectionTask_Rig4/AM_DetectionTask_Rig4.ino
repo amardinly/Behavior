@@ -1,11 +1,11 @@
-int state = 3;
+int state = 2;
 // state1 = autorreward (auto)
 // state2 = add catch trials  (S2)
 // state3 = pyschometric curve (S3)
 // state4 = weighted psy curve (S4)
-bool Rig = true;
+bool Rig = false;
 bool synch = false;
-bool visual = true;
+bool visual = false;
 
 
 bool autoReward;
@@ -14,10 +14,10 @@ int outputWeights[12];
 
 
 
-int magOnTime = 400;  //duration of magnet on time
+int magOnTime = 100;  //duration of magnet on time
 int valveOpenTime = 50; //millis that the H20 valve is open
 int lickResponseWindow = 1000;//amount of time mice have to response
-int responseDelay = 500;  //time between stim onset and answer period
+int responseDelay = 400;  //time between stim onset and answer period
 int preTrialNoLickTime = 2000;// no licks before trial or we tgrigger a false alarm
 int timeOutDurationMin = 5000;  
 int timeOutDurationMax = 8000;  
@@ -88,32 +88,29 @@ bool donePulsing = false;
 void chooseParams() {
       if (state==1) {
           autoReward = true;
+          outputLevels[0] = 250;
           if (visual==true){
             outputLevels[0] = 126;
-          } else{
-            outputLevels[0] = 250;
           }
           outputWeights[0] = 1;
       }
       if (state==2) {
           autoReward = false;
           outputLevels[0] = 0;
+          outputLevels[1] = 250;
           if (visual==true){
             outputLevels[1] = 126;
-          } else{
-            outputLevels[1] = 250;
-          }
+          } 
           outputWeights[0] = 1;
           outputWeights[1] = 4;
       }
       if (state==3) {
           autoReward = false;
+          int theLevels[8]={0,60,100,130,160,190,220,250};
+          int theWeights[8] = {1, 1, 1, 1, 1, 1,1,1};
           if (visual==true){
-            int theLevels[6]={0,20,    50,   80,   110,   125};//{0,60,100,130,160,190,220,250};
-            int theWeights[6] = {1, 1, 1, 1, 1, 1};
-          } else{
-            int theLevels[8]={0,60,100,130,160,190,220,250};
-            int theWeights[8] = {1, 1, 1, 1, 1, 1,1,1};
+            int theLevels[8]={0,20,  35,  50,   80, 95,  110,   125};//{0,60,100,130,160,190,220,250};
+            int theWeights[8] = {1, 1, 1, 1, 1, 1};
           }
           for (int index = 0; index < (sizeof(theWeights) / sizeof(int)); index++){
             outputLevels[index] = theLevels[index];
@@ -124,7 +121,7 @@ void chooseParams() {
 
 // the setup function runs once when you press reset or power the board
 void setup() {
-  Serial.begin(14400);
+  Serial.begin(9600);
   pinMode(magnetPin, OUTPUT);
   pinMode(waterPin, OUTPUT);
   pinMode(LEDpin, OUTPUT);
