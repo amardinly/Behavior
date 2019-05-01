@@ -108,10 +108,10 @@ void chooseParams() {
           autoReward = false;
           int theLevels[8]={0,60,100,130,160,190,220,250};
           int theWeights[8] = {1, 1, 1, 1, 1, 1,1,1};
-          if (visual==true){
-            int theLevels[8]={0,20,  35,  50,   80, 95,  110,   125};//{0,60,100,130,160,190,220,250};
-            int theWeights[8] = {1, 1, 1, 1, 1, 1};
-          }
+          //if (visual==true){
+          //  int theLevels[8]={0,20,  35,  50,   80, 95,  110,   125};//{0,60,100,130,160,190,220,250};
+          //  int theWeights[8] = {1, 1, 1, 1, 1, 1};
+          //}
           for (int index = 0; index < (sizeof(theWeights) / sizeof(int)); index++){
             outputLevels[index] = theLevels[index];
             outputWeights[index] = theWeights[index];
@@ -192,10 +192,10 @@ void endSendPiStimIntensity(){
 
 void doPulsingStimIdx(){
   //use global variables to handle pulsing for sending stim idx
-  if (millis() >= nextPulseTime && pulsesSent < nextStimIdx){
+  if (millis() >= nextPulseTime & pulsesSent < nextStimIdx){
       if (pulsing == true){ //if its currently on, turn it off
         digitalWrite(digOutPin, LOW);
-        nextPulseTime = millis() + 2;
+        nextPulseTime = millis() + 4;
         pulsesSent++;
         pulsing = false;
         if (pulsesSent == nextStimIdx){
@@ -203,7 +203,7 @@ void doPulsingStimIdx(){
         }
       } else{
         digitalWrite(digOutPin, HIGH);
-        nextPulseTime = millis()+2;
+        nextPulseTime = millis()+4;
         pulsing = true;      
       }
   }
