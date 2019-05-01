@@ -22,8 +22,8 @@ import org.gicentre.utils.io.*;
 import org.gicentre.utils.*;
 import org.gicentre.utils.text.*;
 import org.gicentre.utils.network.*;
-import processing.serial.*;    // import the Processing serial library //<>// //<>// //<>// //<>// //<>//
-import controlP5.*; //<>//
+import processing.serial.*;    // import the Processing serial library //<>// //<>// //<>// //<>//
+import controlP5.*;
 ControlP5 cp5;
 controlP5.Button b;
 DropdownList d1, d2;
@@ -49,8 +49,8 @@ float catchTrial;
 float countTrialTally=0;
 float countStim=0;
 boolean StimTrial = false;
-
-String BoxNo = "2a"; //Change box number to keep track of training rig being used
+        
+String BoxNo = "2b"; //Change box number to keep track of training rig being used
 String currPath = "C:/BehaviorDATA/"; //D drive used on tablets
 String currFolder = currPath;
               
@@ -227,6 +227,38 @@ size(800, 700); //from600
                   .setSize(sizeTextBoxW/4, sizeTextBoxH)
                   //.setFont(createFont("arial", 20))
                   .setText(BoxNo)
+                  .setFont(font2)
+                  .setAutoClear(false)
+                  .getCaptionLabel()
+                  .setFont(font)
+                  ;
+                  
+                  cp5.addTextfield("state")
+                  .setPosition(ScreenSizeW*0.5, ScreenSizeH*0.05)
+                  .setSize(sizeTextBoxW/4, sizeTextBoxH)
+                  //.setFont(createFont("arial", 20))
+                  .setText("1")
+                  .setFont(font2)
+                  .setAutoClear(false)
+                  .getCaptionLabel()
+                  .setFont(font)
+                  ;
+                  
+                  cp5.addTextfield("%size")
+                  .setPosition(ScreenSizeW*0.5, ScreenSizeH*0.15)
+                  .setSize(sizeTextBoxW/2, sizeTextBoxH)
+                  //.setFont(createFont("arial", 20))
+                  .setText("100")
+                  .setFont(font2)
+                  .setAutoClear(false)
+                  .getCaptionLabel()
+                  .setFont(font)
+                  ;
+                  cp5.addTextfield("black_level")
+                  .setPosition(ScreenSizeW*0.33, ScreenSizeH*0.15)
+                  .setSize(sizeTextBoxW/2, sizeTextBoxH)
+                  //.setFont(createFont("arial", 20))
+                  .setText("0")
                   .setFont(font2)
                   .setAutoClear(false)
                   .getCaptionLabel()
@@ -456,8 +488,8 @@ size(800, 700); //from600
                 
                 
                 
-    myPort = new Serial(this, Serial.list()[5], 14400);
-  myPort.bufferUntil('\n'); 
+    myPort = new Serial(this, Serial.list()[6], 9600);
+  myPort.bufferUntil('\n');
 }
 void draw() {
   //we can leave the draw method empty, 

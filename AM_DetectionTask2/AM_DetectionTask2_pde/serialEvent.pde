@@ -14,10 +14,12 @@ if (val != null) {
 if (firstContact == false) {
     if (val.equals("A")) {
       myPort.clear();
-      firstContact = true;
-      myPort.write("A");
+      
+      //myPort.write("A");
       println("contact");
+      
       makeContact = false;
+      firstContact = true;
     }
   }
 
