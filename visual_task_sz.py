@@ -7,21 +7,19 @@ import RPi.GPIO as GPIO
 import pickle
 import scipy.stats as st
 
-def genSinusoid(sz, A, omega, rho):
+def genSinusoid(sz, A, omega, rho, cpp):
     # Generate Sinusoid grating
     # sz: size of generated image (width, height)
     radius = (int(sz[1]/2.0), int(sz[0]/2.0))
     [x, y] = np.meshgrid(range(-radius[0], radius[0]+1), range(-radius[1], radius[1]+1)) # a BUG is fixed in this line
-    cpp = .425
     stimuli = A * np.cos(cpp * omega[0] * x  + cpp *omega[1] * y + rho)
     return stimuli
 
 class SampleApp(tk.Tk):
     def __init__(self, *args, **kwargs):
-        
-        
         tk.Tk.__init__(self, *args, **kwargs)
         self.base_size = (480,656)
+	#use pickle to load LUT
         with open('/home/pi/Documents/lut.p','rb') as f:
             self.LUT = pickle.load(f)
         self.blank_level=None
@@ -30,10 +28,10 @@ class SampleApp(tk.Tk):
         self.canvas = tk.Canvas(self, width=self.base_size[1],
                                 height=self.base_size[0])
         self.canvas.pack()
-        start = time.time()
         theta = np.pi/4
         omega = [np.cos(theta)/15, np.sin(theta)/15]
-        """pregen the sinusoids at full contrast, will alter later"""
+	cpp = .425 #cycles per pixel, probably stop hardcoding this 
+        #pregen the sinusoids at full contrast, will alter later
         self.sinusoids = [genSinusoid(**{'A':1, 'omega':omega,
                                          'rho':i*np.pi/8,
                                          'sz':self.base_size}) \
@@ -42,11 +40,9 @@ class SampleApp(tk.Tk):
         self.photos_dict = {}
 
         self.blank = np.zeros(self.base_size, 'uint8') #+ self.blank_level
-
         self.blank = Image.fromarray(self.blank)
         self.blank = ImageTk.PhotoImage(image=self.blank)
                           
-        print(time.time()-start)
         self.start = time.time()
         self.index = 0
         self.canv_im = self.canvas.create_image(0,0, anchor=tk.NW, image=self.blank)
@@ -58,42 +54,18 @@ class SampleApp(tk.Tk):
         
 
     def generate_blank(self):
-        
+	""" creates a blank image with lum at the currently set self.blank_level """
         self.blank = np.zeros(self.base_size, 'uint8') + self.LUT[self.blank_level]
-
         self.blank = Image.fromarray(self.blank)
         self.blank = ImageTk.PhotoImage(image=self.blank)
 
-    def gkern(self, kerlen, nsig):
-        interval = (2*nsig+1.)/(kernlen)
-        x = np.linspace(-nsig-interval/2., nsig+interval/2.,kerlen+1)
-        kern1d=np.diff(st.norm.cdf(z))
-        kernel_raw = np.sqrt(np.outer(kern1d,kern1d))
-        kernel = kernel_raw/kernel_raw.sum()
-        return kernel
-
-    def make_gauss(self, gaussDim):
-        gaussSigma = gaussDim/3
-        x, y = np.meshgrid(np.linspace(-1,1,gaussDim),
-                           np.linspace(-1,1,gaussDim))
-        gauss = np.exp(-(((x**2)+(y**2)) / (2*gaussSigma**2)))
-        gauss = gauss-np.min(gauss)
-        gauss = gauss/np.max(gauss)
-        add_vert = (self.size[0]-50)/2
-        add_horiz = (self.size[1]-50)/2
-        gauss = np.pad(gauss, ((add_vert, add_vert), (add_horiz, add_horiz
-    
     def create_gratings(self, intensity):
+	""" create the grating set for a given intensity """
         conv_array = [arr for arr in self.sinusoids]
-        
-        
         conv_array = [np.uint8(arr*int(intensity/2)+128) for arr in conv_array]
-        print(np.mean(self.sinusoids[0]))
-        print(np.mean(np.mean(conv_array[0])))
         conv_array = [self.LUT[arr] for arr in conv_array]
 
         if self.scale is not 100:
-            gauss = self.make_gauss(self.size[0])
             for arr in conv_array:
                 change = np.floor(self.size[0]/2)
                 midpts = np.floor(np.asarray(self.base_size)/2)
@@ -109,11 +81,10 @@ class SampleApp(tk.Tk):
         images = [Image.fromarray(arr) for arr in conv_array]
         self.photos_dict[intensity] = [ImageTk.PhotoImage(image=im) for im in images]
 
-    #I guess make a publicly accessible method that tells it to stop?
+
     def stop_grating(self):
         self.do_display = False
 
-    
     def update_grating(self):
         if len(self.photos) > 0:
             print(time.time()-self.start)
@@ -146,7 +117,7 @@ class SampleApp(tk.Tk):
     def stim_pin_callback(self, _):
         print('time since callback', time.time() - self.last_cb_time)
         self.last_cb_time = time.time()
-        #for now just hardcode some sillyness
+        #a way of checking for on vs off
         if GPIO.input(27):
             self.start_grating()
         else:
