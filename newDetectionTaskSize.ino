@@ -1,4 +1,4 @@
-int state = 1;
+
 // state1 = autorreward (auto)
 // state2 = add catch trials  (S2)
 // state3 = pyschometric curve (S3)
@@ -6,13 +6,25 @@ int state = 1;
 bool Rig = false;
 bool synch = false;
 bool visual = true;
+//these variables are dependent on state/set by processing
+int state = 1;
 bool autoReward;
 int outputLevels[12];
 int outputWeights[12];
 int black_level = 0;
 int grate_size = 100;
 
-bool init_pi = false;
+
+
+//Init Exp Defaults
+int isiMin = 3000;//as in petersen paper
+int isiMax = 5000;//2/25 changed from 8000 as in petersen paper
+int trialNumber = 1000;  // num trials to allow
+int trialStartTime = 2000;
+int ISIDistribution[1050];  ///pad extra to prevent errors
+int stimVals[1050];
+int stopAfter_n_rewards = 10000;  //dont water that mouse too much!
+int stimDelayStart = 50;  // send a trigger to the DAQ 50 ms before stimulus
 int magOnTime = 100;  //duration of magnet on time
 int valveOpenTime = 50; //millis that the H20 valve is open
 int lickResponseWindow = 1000;//amount of time mice have to response
@@ -40,7 +52,7 @@ const byte numPins = 8;
 byte pins[] = {36, 37, 38, 39, 40, 41, 42, 43}; //pins for writing binary info
 int piInputPin = 42; //get info from the pi
 
-//init vars
+//init vars altered during trials
 int thisTrialNumber = 0;
 bool stimTime = false;
 bool trialRunning = false;
@@ -62,20 +74,7 @@ int nextTrialStart = 5000;  //5 sec baseline before we start stuff
 int turnOffStim = 0;
 int turnOffResponseWindow = 0;
 int cumRewards = 0;
-char val;  //data received from serial port
-
-
-//Init Exp Defaults
-int isiMin = 3000;//as in petersen paper
-int isiMax = 5000;//2/25 changed from 8000 as in petersen paper
-int trialNumber = 1000;  // num trials to allow
-int trialStartTime = 2000;
-int ISIDistribution[1050];  ///pad extra to prevent errors
-int stimVals[1050];
-int stopAfter_n_rewards = 10000;  //dont water that mouse too much!
-int stimDelayStart = 50;  // send a trigger to the DAQ 50 ms before stimulus
-
-//init more variables
+bool init_pi = false;
 int stimStartTime = 0;
 int stimEndTime = 0;
 int rewardPeriodStart =0;
@@ -85,8 +84,11 @@ int pulsesSent = 0;
 int nextPulseTime = 0;
 int nextStimIdx = 0;
 bool donePulsing = false;
+char val;  //data received from serial port
+
 
 void chooseParams() {
+      // set autoreward and contrast levels based on state chosen
       if (state==1) {
           autoReward = true;
           outputLevels[0] = 250;
@@ -144,6 +146,8 @@ void setup() {
     pinMode(pins[i], OUTPUT);
     digitalWrite(pins[i], LOW);
   }
+  
+  //set values that vary between mag + vis
   if (visual==true){
     magOnTime=600;
     responseDelay=0;
@@ -160,6 +164,7 @@ void setup() {
 }
 
 void establishContact() {
+  //handshake with processing and then get the state, grate_size, and then black_level
   while (Serial.available() <= 0) {
     Serial.println("A");
     delay(300);
@@ -243,6 +248,7 @@ void endSendPiStimIntensity(){
 
 void doPulsingStimIdx(){
   //use global variables to handle pulsing for sending stim idx
+  //this is just used for daq comm
   if (millis() >= nextPulseTime && pulsesSent < nextStimIdx){
       if (pulsing == true){ //if its currently on, turn it off
         digitalWrite(digOutPin, LOW);
@@ -261,6 +267,7 @@ void doPulsingStimIdx(){
 }
 
 int getNextStimIdx(){
+    //for daq communication
     int wantedval = stimVals[thisTrialNumber+1];
     for (int i=0; i < (sizeof(outputLevels) / sizeof(int)); i++) {
          if (wantedval == outputLevels[i]) {
@@ -273,6 +280,7 @@ int getNextStimIdx(){
 }
     
 void checkSerial(){
+  //check serial for start/stop or prompt info
   if (Serial.available()) {
       val = Serial.read();
       Serial.println(val);
@@ -327,6 +335,7 @@ void checkSerial(){
 }
 
 void sendBehaviorOutcome(){
+      //for daq comm, send pulses
       if (stimVals[thisTrialNumber] == 0 && catchFA == true) {
          for (int pulses = 0; pulses < 1; pulses++){
             digitalWrite(digOutPin, HIGH);
@@ -398,8 +407,9 @@ void resetTrial(){
 }
 
 
+bool isLicking(){    
 //get whether or not mouse is licking
-bool isLicking(){
+//sign of the signal is inverted depending on detector
   bool lick=false;
   if (Rig==false){
     if(digitalRead(lickportPin) == LOW) {
@@ -432,6 +442,7 @@ void turnMagOn(){
   digitalWrite(stimIndicatorPin,HIGH);
   magnetOn = true; //for serial
 }
+
 void turnMagOff(){
   analogWrite(magnetPin,  0);  // put voltage on the magnet
   digitalWrite(stimIndicatorPin,LOW);
@@ -458,11 +469,12 @@ void loop() {
 
   //if its running, do trial things.
   if (isRunning == true) {
-      //first, begin in the ISI stage
+      //first, begin in the ISI stage, hold in this while loop
       while (millis() < nextTrialStart || daqReady==false){
         falseAlarm = false;  //reset this 
         lickOccured = isLicking();
-        //if daq is not yet ready, check if ready
+            
+        //RIG ONLY: if daq is not yet ready, check if ready
         if (daqReady == false){
           if (digitalRead(readyToGoPin)==HIGH) {
             daqReady = true;
@@ -472,28 +484,28 @@ void loop() {
             nextTrialStart = millis() + 500; 
           }
         }
+            
         //check if a false alarm occured, act accordingly
         if (nextTrialStart - (millis()) < preTrialNoLickTime && lickOccured == true) {
                 nextTrialStart = nextTrialStart + random(timeOutDurationMin,timeOutDurationMax);
                 falseAlarm = true;
         }
-        //talk to serial at the end of each loop, and check on serial too
+        //talk to serial at the end of each loop of while, and check on serial too
         sendSerial();
         checkSerial();
       }
 
       startTrial(); // initialize trial
-      
 
       //then wait for the stimulus start
       while (millis()<=stimStartTime){
         sendSerial();
       }
       
-      digitalWrite(triggerPin,LOW); //end trigger
+      digitalWrite(triggerPin,LOW); //end trigger, ONLY MATTERS FOR RIG
       if (visual==true){
         turnVisOn();
-        endSendPiStimIntensity();
+        endSendPiStimIntensity(); //cease trial start signals
       } else{
         turnMagOn(); //start mag
       }
@@ -584,6 +596,8 @@ void sendSerial(){
   Serial.print(",");
   Serial.println(falseAlarm);
 }
+
+
 void populateTrials() {
   int arraySum;
   arraySum = 0;
