@@ -414,7 +414,7 @@ void startTrial(){
       nextPulseTime = millis() + stimDelayStart;
       //SET TIMER FOR REWARD PERIOD START
       
-      Start = stimEndTime + responseDelay;
+      rewardPeriodStart = stimEndTime + responseDelay;
       //SET TIMER FOR REWARD PERIOD END
       rewardPeriodEnd = rewardPeriodStart + lickResponseWindow;
       trialStartTime = millis();
@@ -465,7 +465,7 @@ void turnTimeOutSignalOffOnTime(){
   // close the water if its time to!
   if (millis() >= timeOutSignalEnd && timeOutSignalOn == true) {
       digitalWrite(piFAPin, LOW); //close the water
-      timeOutSignalOpen = false;
+      timeOutSignalOn = false;
   }
 }
 
@@ -620,7 +620,7 @@ void loop() {
         sendBehaviorOutcome();
       }
       turnTimeOutSignalOffOnTime();
-      timeOutEnd = rewardPeriodEnd + random(timeOutDurationMin,timeOutDurationMax)
+      timeOutEnd = rewardPeriodEnd + random(timeOutDurationMin,timeOutDurationMax);
       // give a timeout for catch false alarm licking
       if (catchFA){
             while (millis()<=timeOutEnd){
@@ -658,9 +658,9 @@ void sendSerial(){
   Serial.print(",");
   Serial.print(waterPortOpen);
   Serial.print(",");
-  Serial.println(falseAlarm);
+  Serial.print(falseAlarm);
   Serial.print(",");
-  Serial.print(sizeVals[thisTrialNumber]);
+  Serial.println(sizeVals[thisTrialNumber]);
 }
 
 
@@ -696,8 +696,8 @@ void populateTrials() {
     for (int n = 0; n < (sizeof(weightedOutputs) / sizeof(int)); n++) {
       stimVals[i] = weightedOutputs[n];
       ISIDistribution[i] = random(isiMin, isiMax); //random isi distribution
-      rand_n = random(0,1);
-      if (rand_n==0){
+      rand_n = random(1,100);
+      if (rand_n>50){
             sizeVals[i] = grate_size1;
       } else{
             sizeVals[i] = grate_size2;
