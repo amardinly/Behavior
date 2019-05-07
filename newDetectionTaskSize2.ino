@@ -34,6 +34,7 @@ int responseDelay = 400;  //time btween stim offset and answer period
 int preTrialNoLickTime = 2000;// no licks before trial or we trigger a false alarm
 int timeOutDurationMin = 5000;  
 int timeOutDurationMax = 8000;  
+int timeOutSignalTime = 4000;
 
 //Specify pins
 int lickportPin = 5;
@@ -52,6 +53,8 @@ int piInitPin = 34; //tell pi to turn stim off
 int piReceivePin = 35; //tell pi to receive next trial stim info
 const byte numPins = 8;
 byte pins[] = {36, 37, 38, 39, 40, 41, 42, 43}; //pins for writing binary info
+int piFAPin = 44;
+
 
 //init vars altered during trials
 int thisTrialNumber = 0;
@@ -84,6 +87,9 @@ int lickCounter = 0;
 int pulsesSent = 0;
 int nextPulseTime = 0;
 int nextStimIdx = 0;
+int timeOutEnd = 0;
+bool timeOutSignalOn = false;
+int timeOutSignalEnd = 0;
 bool donePulsing = false;
 char val;  //data received from serial port
 
@@ -134,9 +140,10 @@ void setup() {
   pinMode(piOnPin, OUTPUT);
   pinMode(piInitPin, OUTPUT);
   pinMode(piReceivePin, OUTPUT);
-  pinMode(piInputPin, INPUT);
+  pinMode(piFAPin, OUTPUT);
   digitalWrite(piInitPin, LOW);
   digitalWrite(piReceivePin, LOW);
+  digitalWrite(piFAPin, LOW);
   for (int i=0; i<numPins; i++){
     pinMode(pins[i], OUTPUT);
     digitalWrite(pins[i], LOW);
@@ -305,6 +312,7 @@ void checkSerial(){
         isRunning = false;
         analogWrite(magnetPin, 0); // make sure mag and water are closed
         digitalWrite(waterPin, LOW);
+        digitalWrite(piFAPin, LOW);
       }
 
       if (val == '2' & isRunning == false) {
@@ -405,11 +413,11 @@ void startTrial(){
       //TIMER FOR PULSING
       nextPulseTime = millis() + stimDelayStart;
       //SET TIMER FOR REWARD PERIOD START
-      rewardPeriodStart = stimEndTime + responseDelay;
+      
+      Start = stimEndTime + responseDelay;
       //SET TIMER FOR REWARD PERIOD END
       rewardPeriodEnd = rewardPeriodStart + lickResponseWindow;
       trialStartTime = millis();
-      
 }
 
 void resetTrial(){
@@ -452,6 +460,22 @@ void turnWaterOn(){
   waterPortOpen = true;
 }
 
+
+void turnTimeOutSignalOffOnTime(){
+  // close the water if its time to!
+  if (millis() >= timeOutSignalEnd && timeOutSignalOn == true) {
+      digitalWrite(piFAPin, LOW); //close the water
+      timeOutSignalOpen = false;
+  }
+}
+
+void turnTimeOutSignalOn(){
+  digitalWrite(piFAPin, HIGH); //open the water
+  timeOutSignalEnd = millis() + timeOutSignalTime; //mark time to stop signal
+  timeOutSignalOn = true;
+}
+
+
 void turnMagOn(){
   analogWrite(magnetPin,  stimVals[thisTrialNumber]);  // put voltage on the magnet
   digitalWrite(stimIndicatorPin,HIGH);
@@ -476,12 +500,16 @@ void turnVisOff(){
   digitalWrite(stimIndicatorPin, LOW);
 }
 
+
+
+
+//--------------------------------------------------///
+//--------------------------------------------------///
 // the loop function runs over and over again forever
 void loop() {
  
   checkSerial();
    
-
   //if its running, do trial things.
   if (isRunning == true) {
       prepTrial(); //send values to pi
@@ -505,11 +533,16 @@ void loop() {
         if (nextTrialStart - (millis()) < preTrialNoLickTime && lickOccured == true) {
                 nextTrialStart = nextTrialStart + random(timeOutDurationMin,timeOutDurationMax);
                 falseAlarm = true;
+                turnTimeOutSignalOn();
         }
+        turnTimeOutSignalOffOnTime();
         //talk to serial at the end of each loop of while, and check on serial too
         sendSerial();
         checkSerial();
       }
+      // just in case
+      digitalWrite(piFAPin, LOW);
+      timeOutSignalOn = false;
 
       startTrial(); // initialize trial
 
@@ -561,6 +594,7 @@ void loop() {
                 turnWaterOn();
               } else {
                 catchFA = true;
+                turnTimeOutSignalOn();
               }
             }
           }
@@ -568,6 +602,7 @@ void loop() {
             doPulsingStimIdx();
           }
           turnWaterOffOnTime();
+          turnTimeOutSignalOffOnTime();
           sendSerial();
       }
       //just in case, turn off water
@@ -579,12 +614,25 @@ void loop() {
       while (donePulsing==false && Rig==true){
         doPulsingStimIdx();
       }
-
+      turnTimeOutSignalOffOnTime();
       //send behavior outcome triggers 1=FA,2=CR,3=MS,4=HT
       if (Rig==true){
         sendBehaviorOutcome();
       }
-
+      turnTimeOutSignalOffOnTime();
+      timeOutEnd = rewardPeriodEnd + random(timeOutDurationMin,timeOutDurationMax)
+      // give a timeout for catch false alarm licking
+      if (catchFA){
+            while (millis()<=timeOutEnd){
+                  turnTimeOutSignalOffOnTime();
+                  checkSerial();
+                  sendSerial();
+            }
+      }
+      // just in case
+      digitalWrite(piFAPin, LOW);
+      timeOutSignalOn = false;
+      
       resetTrial(); 
       sendSerial();
   }
