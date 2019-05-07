@@ -12,24 +12,26 @@ bool autoReward;
 int outputLevels[12];
 int outputWeights[12];
 int black_level = 0;
-int grate_size = 100;
+int grate_size1 = 100;
+int grate_size2 = 200;
 
 
 
 //Init Exp Defaults
 int isiMin = 3000;//as in petersen paper
-int isiMax = 5000;//2/25 changed from 8000 as in petersen paper
+int isiMax = 9000;// 5/6 changed to 9000 //2/25 changed from 8000 as in petersen paper
 int trialNumber = 1000;  // num trials to allow
 int trialStartTime = 2000;
 int ISIDistribution[1050];  ///pad extra to prevent errors
 int stimVals[1050];
+int sizeVals[1050];
 int stopAfter_n_rewards = 10000;  //dont water that mouse too much!
 int stimDelayStart = 50;  // send a trigger to the DAQ 50 ms before stimulus
 int magOnTime = 100;  //duration of magnet on time
 int valveOpenTime = 50; //millis that the H20 valve is open
 int lickResponseWindow = 1000;//amount of time mice have to response
 int responseDelay = 400;  //time btween stim offset and answer period
-int preTrialNoLickTime = 2000;// no licks before trial or we tgrigger a false alarm
+int preTrialNoLickTime = 2000;// no licks before trial or we trigger a false alarm
 int timeOutDurationMin = 5000;  
 int timeOutDurationMax = 8000;  
 
@@ -50,7 +52,6 @@ int piInitPin = 34; //tell pi to turn stim off
 int piReceivePin = 35; //tell pi to receive next trial stim info
 const byte numPins = 8;
 byte pins[] = {36, 37, 38, 39, 40, 41, 42, 43}; //pins for writing binary info
-int piInputPin = 42; //get info from the pi
 
 //init vars altered during trials
 int thisTrialNumber = 0;
@@ -92,18 +93,12 @@ void chooseParams() {
       if (state==1) {
           autoReward = true;
           outputLevels[0] = 250;
-          if (visual==true){
-            outputLevels[0] = 248;
-          }
           outputWeights[0] = 1;
       }
       if (state==2) {
           autoReward = false;
           outputLevels[0] = 0;
           outputLevels[1] = 250;
-          if (visual==true){
-            outputLevels[1] = 250;
-          } 
           outputWeights[0] = 1;
           outputWeights[1] = 4;
       }
@@ -178,7 +173,12 @@ void establishContact() {
        value = (value * 10) + (ch - '0'); // yes, accumulate the value
     else if (ch=='z') // this assumes any char not a digit or minus sign terminates the value
     {
-       grate_size = value;
+       grate_size1 = value;
+       value = 0; // reset value to 0 ready for the next sequence of digits
+    }
+    else if (ch=='c') // this assumes any char not a digit or minus sign terminates the value
+    {
+       grate_size2 = value;
        value = 0; // reset value to 0 ready for the next sequence of digits
     }
     else if (ch=='b') // this assumes any char not a digit or minus sign terminates the value
@@ -205,32 +205,39 @@ void initPiIntensities(){
   //send a series of intensities to tell the pi what 
   //values to prepare.
   Serial.println("starting pi intensities");
-  Serial.print("size is ");
-  Serial.println(grate_size);
+  Serial.print("size 1 is ");
+  Serial.println(grate_size1);
+  Serial.print("size 2 is ");
+  Serial.println(grate_size2);
   Serial.print("black level is ");
   Serial.println(black_level);
   digitalWrite(piInitPin, HIGH);
   delay(100);
-  //first, send size
-  sendPiStimIntensity(grate_size);
+  //first, send sizes
+  sendPiNumber(grate_size1);
   delay(50);
-  endSendPiStimIntensity();
+  endSendPiNumber();
   delay(50);
-  //first, send the black level
-  sendPiStimIntensity(black_level);
-   delay(50);
-    endSendPiStimIntensity();
-    delay(20);
+  sendPiNumber(grate_size2);
+  delay(50);
+  endSendPiNumber();
+  delay(50);
+  //send the black level
+  sendPiNumber(black_level);
+  delay(50);
+  endSendPiNumber();
+  delay(20);
   for (int index = 0; index < (sizeof(outputLevels) / sizeof(int)); index++){
-    sendPiStimIntensity(outputLevels[index]);
+    sendPiNumber(outputLevels[index]);
     delay(50);
-    endSendPiStimIntensity();
+    endSendPiNumber();
     delay(20);
   }
   digitalWrite(piInitPin, LOW);
+  delay(3000); //let the pi do its thing
 }
 
-void sendPiStimIntensity(int num){
+void sendPiNumber(int num){
   for (byte i=0; i<numPins; i++) {
     byte state = bitRead(num, i);
     digitalWrite(pins[i], state);
@@ -239,7 +246,7 @@ void sendPiStimIntensity(int num){
   digitalWrite(piReceivePin, HIGH);
 }
 
-void endSendPiStimIntensity(){
+void endSendPiNumber(){
   for (byte i=0; i<numPins; i++) {
     digitalWrite(pins[i], LOW);
   }
@@ -310,7 +317,7 @@ void checkSerial(){
       }
       if (val == '3' & isRunning == false) {
         if (visual==true){
-          sendPiStimIntensity(126);
+          sendPiNumber(126);
           delay(50);
           turnVisOn();
           delay(200);
@@ -371,6 +378,16 @@ void sendBehaviorOutcome(){
       }
 }
 
+void prepTrial(){
+      if (visual==true){
+        sendPiNumber(sizeVals[thisTrialNumber+1]);
+        delay(50);
+        endSendPiNumber();
+        delay(50);
+        sendPiNumber(stimVals[thisTrialNumber+1]);
+      }
+}
+
 void startTrial(){
       if (Rig == true && synch == true) {
         Serial.println("hey hey");
@@ -392,9 +409,7 @@ void startTrial(){
       //SET TIMER FOR REWARD PERIOD END
       rewardPeriodEnd = rewardPeriodStart + lickResponseWindow;
       trialStartTime = millis();
-      if (visual==true){
-        sendPiStimIntensity(stimVals[thisTrialNumber]);     
-      }
+      
 }
 
 void resetTrial(){
@@ -412,7 +427,7 @@ bool isLicking(){
 //sign of the signal is inverted depending on detector
   bool lick=false;
   if (Rig==false){
-    if(digitalRead(lickportPin) == LOW) {
+    if(digitalRead(lickportPin) == LOW){
       lick = true;
     }
   }else if (digitalRead(lickportPin) == HIGH ){
@@ -469,6 +484,7 @@ void loop() {
 
   //if its running, do trial things.
   if (isRunning == true) {
+      prepTrial(); //send values to pi
       //first, begin in the ISI stage, hold in this while loop
       while (millis() < nextTrialStart || daqReady==false){
         falseAlarm = false;  //reset this 
@@ -505,7 +521,7 @@ void loop() {
       digitalWrite(triggerPin,LOW); //end trigger, ONLY MATTERS FOR RIG
       if (visual==true){
         turnVisOn();
-        endSendPiStimIntensity(); //cease trial start signals
+        endSendPiNumber(); //cease trial start signals
       } else{
         turnMagOn(); //start mag
       }
@@ -595,6 +611,8 @@ void sendSerial(){
   Serial.print(waterPortOpen);
   Serial.print(",");
   Serial.println(falseAlarm);
+  Serial.print(",");
+  Serial.print(sizeVals[thisTrialNumber]);
 }
 
 
@@ -623,12 +641,19 @@ void populateTrials() {
 
   i = 0;
   int arrLen = sizeof(weightedOutputs) / sizeof(int);
+  int rand_n;
   while (i < trialNumber) {
     bubbleUnsort(weightedOutputs, arrLen);       //randomize the weighted trial lengths
 
     for (int n = 0; n < (sizeof(weightedOutputs) / sizeof(int)); n++) {
       stimVals[i] = weightedOutputs[n];
       ISIDistribution[i] = random(isiMin, isiMax); //random isi distribution
+      rand_n = random(0,1);
+      if (rand_n==0){
+            sizeVals[i] = grate_size1;
+      } else{
+            sizeVals[i] = grate_size2;
+      }
       i++;
     }
   }
