@@ -113,8 +113,8 @@ void chooseParams() {
       }
       if (state==3) {
           autoReward = false;
-          int theLevels[8]={0,8,16,32,64,128,180,255};
-          int theWeights[8] = {1, 1, 1, 1, 1, 1,1,1};
+          int theLevels[10]={0,4,8,16,32,64,128,180,220,255};
+          int theWeights[10] = {1,1, 1, 1, 1, 1, 1,1,1,1};
           //if (visual==true){
           //  int theLevels[8]={0,20,  35,  50,   80, 95,  110,   125};//{0,60,100,130,160,190,220,250};
           //  int theWeights[8] = {1, 1, 1, 1, 1, 1};
@@ -472,11 +472,14 @@ void turnTimeOutSignalOffOnTime(){
   }
 }
 
+
 void turnTimeOutSignalOn(){
   if (do_timeout==true){
-    digitalWrite(piFAPin, HIGH); //open the water
-    tone(8, 4048, timeOutToneTime);
+    //digitalWrite(piFAPin, HIGH); //open the water
+    
+    tone(8, 6048, timeOutToneTime);
     timeOutSignalEnd = millis() + timeOutSignalTime; //mark time to stop signal
+    //generateNoiseSound();
     timeOutSignalOn = true;
   }
 }
