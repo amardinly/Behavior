@@ -1,3 +1,4 @@
+#include <math.h>    // (no semicolon)
 
 // state1 = autorreward (auto)
 // state2 = add catch trials  (S2)
@@ -10,6 +11,7 @@ bool do_timeout = true;
 //these variables are dependent on state/set by processing
 int state = 1;
 bool autoReward;
+bool doOpto = false;
 int outputLevels[12];
 int outputWeights[12];
 int black_level = 0;
@@ -17,6 +19,8 @@ int grate_size1 = 100;
 int grate_size2 = 200;
 
 
+bool altISI = true;
+ 
 
 //Init Exp Defaults
 int isiMin = 3000;//as in petersen paper
@@ -26,7 +30,6 @@ int trialStartTime = 2000;
 int ISIDistribution[1050];  ///pad extra to prevent errors
 int stimVals[1050];
 int sizeVals[1050];
-int stopAfter_n_rewards = 10000;  //dont water that mouse too much!
 int stimDelayStart = 50;  // send a trigger to the DAQ 50 ms before stimulus
 int magOnTime = 600;  //duration of magnet on time
 int valveOpenTime = 50; //millis that the H20 valve is open
@@ -34,9 +37,10 @@ int lickResponseWindow = 1000;//amount of time mice have to response
 int responseDelay = 0;  //time btween stim offset and answer period
 int preTrialNoLickTime = 2000;// no licks before trial or we trigger a false alarm
 int timeOutDurationMin = 5000;  
-int timeOutDurationMax = 8000;  
-int timeOutSignalTime = 4000;
+int timeOutDurationMax = 9000;  
+int timeOutSignalTime = 1000;
 int timeOutToneTime = 1000;
+int optoTrialPercent = 33;
 
 //Specify pins
 int lickportPin = 5;
@@ -90,17 +94,20 @@ int pulsesSent = 0;
 int nextPulseTime = 0;
 int nextStimIdx = 0;
 int timeOutEnd = 0;
+int gracePeriodEnd = 0;
 bool timeOutSignalOn = false;
 int timeOutSignalEnd = 0;
+bool isOpto = false;
+bool ledOn = false;
 bool donePulsing = false;
 char val;  //data received from serial port
 
 
-
-// the setup function runs once when you press reset or power the board
+// the setup function runs once when you press reset or power the board or start a serial connection
 void setup() {
-  Serial.begin(9600);
+  randomSeed(analogRead(0)); //make the random generator more random
   setupPins();
+  Serial.begin(9600);
   
   if (debug == false) {
      establishContact();
@@ -108,6 +115,22 @@ void setup() {
   
   chooseParams();  populateTrials();
   thisTrialNumber = 0;//cant figure out where or how this gets reset....but this fixes it
+}
+
+int getISI(){
+  double q = 2/(min-max);
+  double R = random(0,1001)/1000; //won't generate doubles so gotta do it this way
+  double isi = -1/(q*log(exp(-q*min) - (exp(-q*min)-exp(-q*max))*R));
+  return isi;
+}
+
+bool setIsOpto(){
+  isOpto = random(101) < optoPercent-1;
+  if (isOpto==true){
+    turnLEDOn();
+  } else {
+    turnLEDOff();
+  }
 }
 
 void prepTrial(){
@@ -139,8 +162,7 @@ void startTrial(){
       rewardPeriodEnd = rewardPeriodStart + lickResponseWindow;
       trialStartTime = millis();
       
-      endSendPiNumber(); //cease trial start signals
-      
+      endSendPiNumber(); //cease trial start signals      
 }
 
 void resetTrial(){
@@ -150,7 +172,12 @@ void resetTrial(){
   pulsesSent = 0;
   nextStimIdx = 0;
   donePulsing = false;
-  nextTrialStart = millis() + ISIDistribution[thisTrialNumber]; //+1000;  // set time for next trial start  
+  
+  nextTrialStart = millis() + ISIDistribution[thisTrialNumber]; //+1000;  // set time for next trial start 
+  if (altISI==true){
+    nextTrialStart = millis() + genISI(isiMin, isiMax);
+  }
+  gracePeriodEnd = millis() + timeOutSignalTime;
 }
 
 
@@ -166,31 +193,42 @@ void loop() {
       prepTrial(); //send values to pi
         
       //first, begin in the ISI stage, hold in this while loop
-      while (millis() < nextTrialStart || daqReady==false){
+      while ((millis() < nextTrialStart || daqReady==false) && isRunning == true){
         falseAlarm = false;  //reset this 
         lickOccured = isLicking();
             
         //RIG ONLY: if daq is not yet ready, check if ready
         if (daqReady == false){
           daqReady = isDaqReady();
-          //whether it just became ready or we're still waiting, still want to add 500ms
-          if (nextTrialStart<=millis()+500) {
-            nextTrialStart = millis() + 500; 
-          }
         }
             
         //check if a false alarm occured, act accordingly
-        if (nextTrialStart - (millis()) < preTrialNoLickTime && lickOccured == true) {
-                nextTrialStart = nextTrialStart + random(timeOutDurationMin,timeOutDurationMax);
-                falseAlarm = true;
-                turnTimeOutSignalOn();
+        if (altISI==false){
+          if (nextTrialStart - (millis()) < preTrialNoLickTime && lickOccured == true) {
+                  nextTrialStart = nextTrialStart + random(timeOutDurationMin,timeOutDurationMax);
+                  falseAlarm = true;
+                  turnTimeOutSignalOn();
+          }
+        } else{
+          //IMPLEMENT GRACE PERIOD FOR POST TRIAL LICKING
+          //grace period for time out handled by the time out signal
+          if (lickOccured == true && timeOutSignalOn == false && millis()>gracePeriodEnd){
+            setIsOpto(); //randomly select opto or not and turn LED on or off
+            nextTrialStart = millis() + genISI(isiMin, isiMax); //could also be TO min + max
+            falseAlarm = true;
+            turnTimeOutSignalOn();
+          }
         }
+        
         turnTimeOutSignalOffOnTime();
         //talk to serial at the end of each loop of while, and check on serial too
         sendSerial();
         checkSerial();
       }
-        
+      if (isRunning==false){
+        return; // exit loop to hold in checkSerial
+      }
+      
       // just in case, shutoff timeout signals
       digitalWrite(piFAPin, LOW);  timeOutSignalOn = false;
 
@@ -242,26 +280,23 @@ void loop() {
       sendSerial();
         
       //make sure we finished sending mag stim idx pulses
-      while (donePulsing==false && Rig==true){
-        doPulsingStimIdx();
-      }
-      
-        
-      if (Rig==true){
+      if (Rig == true){
+        while (donePulsing==false){
+          doPulsingStimIdx();
+        }
         sendBehaviorOutcome();
       }
         
-      //now add the time part of the time out
-      timeOutEnd = rewardPeriodEnd + random(timeOutDurationMin,timeOutDurationMax);
-        
-      // give a timeout for catch false alarm licking
-      if (catchFA){
-            while (millis()<=timeOutEnd){
-                  turnTimeOutSignalOffOnTime();
-                  checkSerial();
-                  sendSerial();
-            }
+      // give a time out for false alarm licking after the response window
+      if (catchFA==true && altISI == false){
+        timeOutEnd = rewardPeriodEnd + random(timeOutDurationMin,timeOutDurationMax);
+        while (millis()<=timeOutEnd){
+          turnTimeOutSignalOffOnTime();
+          checkSerial();
+          sendSerial();
+        }
       }
+        
       // just in case
       digitalWrite(piFAPin, LOW);
       timeOutSignalOn = false;
