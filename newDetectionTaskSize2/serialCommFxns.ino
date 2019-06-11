@@ -10,31 +10,28 @@ void checkSerial(){
           initPiIntensities();
           init_pi = true;
         }
-        //nextTrialStart = nextTrialStart + 5000;
-      }
-  
-      if (val == '0') {
+      } else if (val == '0') {
         isRunning = false;
         analogWrite(magnetPin, 0); // make sure mag and water are closed
         digitalWrite(waterPin, LOW);
         digitalWrite(piFAPin, LOW);
-      }
-
-      if (val == '2' & isRunning == false) {
+      } else if (val == '2' & isRunning == false) {
         digitalWrite(waterPin, HIGH);
         delay(valveOpenTime*2);
         digitalWrite(waterPin, LOW);
         if (nextTrialStart<=millis()+1500) {
           nextTrialStart = millis() + 1500; 
         }
-      }
-      if (val == '3' & isRunning == false) {
+      } else if (val == '3' & isRunning == false) {
         if (visual==true){
+          sendPiNumber(grate_size1);
+          delay(50); endSendPiNumber(); delay(50);
           sendPiNumber(126);
           delay(50);
           turnVisOn();
           delay(200);
           turnVisOff();
+          endSendPiNumber();
         }
         analogWrite(magnetPin,  250);
         delay(300);
@@ -43,8 +40,7 @@ void checkSerial(){
         if (nextTrialStart<=millis()+1500) {
           nextTrialStart = millis() + 1500; 
         }
-      }
-      if (val=='4' & visual==true){
+      } else if(val=='4' & visual==true){
         initPiIntensities();
       }
   }
