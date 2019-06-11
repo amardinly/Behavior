@@ -28,10 +28,10 @@ int stimVals[1050];
 int sizeVals[1050];
 int stopAfter_n_rewards = 10000;  //dont water that mouse too much!
 int stimDelayStart = 50;  // send a trigger to the DAQ 50 ms before stimulus
-int magOnTime = 100;  //duration of magnet on time
+int magOnTime = 600;  //duration of magnet on time
 int valveOpenTime = 50; //millis that the H20 valve is open
 int lickResponseWindow = 1000;//amount of time mice have to response
-int responseDelay = 400;  //time btween stim offset and answer period
+int responseDelay = 0;  //time btween stim offset and answer period
 int preTrialNoLickTime = 2000;// no licks before trial or we trigger a false alarm
 int timeOutDurationMin = 5000;  
 int timeOutDurationMax = 8000;  
@@ -42,7 +42,6 @@ int timeOutToneTime = 1000;
 int lickportPin = 5;
 int waterPin = 9;  
 int magnetPin = 11;
-int LEDpin = 3;
 int triggerPin = 12;
 int analogPin = 3;
 int readyToGoPin = 4;
@@ -97,333 +96,55 @@ bool donePulsing = false;
 char val;  //data received from serial port
 
 
-void chooseParams() {
-      // set autoreward and contrast levels based on state chosen
-      if (state==1) {
-          autoReward = true;
-          outputLevels[0] = 250;
-          outputWeights[0] = 1;
-      }
-      if (state==2) {
-          autoReward = false;
-          outputLevels[0] = 0;
-          outputLevels[1] = 250;
-          outputWeights[0] = 1;
-          outputWeights[1] = 4;
-      }
-      if (state==3) {
-          autoReward = false;
-          int theLevels[10]={0,4,8,16,32,64,128,180,220,255};
-          int theWeights[10] = {1,1, 1, 1, 1, 1, 1,1,1,1};
-          //if (visual==true){
-          //  int theLevels[8]={0,20,  35,  50,   80, 95,  110,   125};//{0,60,100,130,160,190,220,250};
-          //  int theWeights[8] = {1, 1, 1, 1, 1, 1};
-          //}
-          for (int index = 0; index < (sizeof(theWeights) / sizeof(int)); index++){
-            outputLevels[index] = theLevels[index];
-            outputWeights[index] = theWeights[index];
-          }
-      }
-}
 
 // the setup function runs once when you press reset or power the board
 void setup() {
   Serial.begin(9600);
-  pinMode(magnetPin, OUTPUT);
-  pinMode(waterPin, OUTPUT);
-  pinMode(LEDpin, OUTPUT);
-  pinMode(lickportPin, INPUT);  // OR INTERRUPT
-  analogWrite(magnetPin, 0); // make sure mag and water are closed
-  digitalWrite(waterPin, LOW);
-  pinMode(triggerPin, OUTPUT);
-  pinMode(analogPin,OUTPUT);
-  pinMode(readyToGoPin,INPUT);
-  pinMode(digOutPin,OUTPUT);
-  pinMode(stimIndicatorPin,OUTPUT);
-  pinMode(piOnPin, OUTPUT);
-  pinMode(piInitPin, OUTPUT);
-  pinMode(piReceivePin, OUTPUT);
-  pinMode(piFAPin, OUTPUT);
-  digitalWrite(piInitPin, LOW);
-  digitalWrite(piReceivePin, LOW);
-  digitalWrite(piFAPin, LOW);
-  for (int i=0; i<numPins; i++){
-    pinMode(pins[i], OUTPUT);
-    digitalWrite(pins[i], LOW);
-  }
-  
-  //set values that vary between mag + vis
-  if (visual==true){
-    magOnTime=600;
-    responseDelay=0;
-  }
+  setupPins();
   
   if (debug == false) {
      establishContact();
   }
   
   chooseParams();  populateTrials();
-  
-  
   thisTrialNumber = 0;//cant figure out where or how this gets reset....but this fixes it
-}
-
-void establishContact() {
-  //handshake with processing and then get the state, grate_size, and then black_level
-  while (Serial.available() <= 0) {
-    Serial.println("A");
-    delay(300);
-  }
-  
-  int value;
-  while ( Serial.available()){
-    char ch = Serial.read();
-    Serial.println(ch);
-    if(ch >= '0' && ch <= '9') // is this an ascii digit between 0 and 9?
-       value = (value * 10) + (ch - '0'); // yes, accumulate the value
-    else if (ch=='z') // this assumes any char not a digit or minus sign terminates the value
-    {
-       grate_size1 = value;
-       value = 0; // reset value to 0 ready for the next sequence of digits
-    }
-    else if (ch=='c') // this assumes any char not a digit or minus sign terminates the value
-    {
-       grate_size2 = value;
-       value = 0; // reset value to 0 ready for the next sequence of digits
-    }
-    else if (ch=='b') // this assumes any char not a digit or minus sign terminates the value
-    {
-       black_level = value;
-       value = 0; // reset value to 0 ready for the next sequence of digits
-    }
-    else if (ch=='s'){
-      state = value;
-      value = 0;
-    }
-    else if (ch=='x'){
-      value=0;
-    }
-    Serial.println(value);
-  }
-  
-  Serial.println("Q");
-  Serial.println(black_level);
-}
-
-void initPiIntensities(){
-  //this will send the pi init pin a trigger and then
-  //send a series of intensities to tell the pi what 
-  //values to prepare.
-  Serial.println("starting pi intensities");
-  Serial.print("size 1 is ");
-  Serial.println(grate_size1);
-  Serial.print("size 2 is ");
-  Serial.println(grate_size2);
-  Serial.print("black level is ");
-  Serial.println(black_level);
-  digitalWrite(piInitPin, HIGH);
-  delay(100);
-  //first, send sizes
-  sendPiNumber(grate_size1);
-  delay(50);
-  endSendPiNumber();
-  delay(50);
-  sendPiNumber(grate_size2);
-  delay(50);
-  endSendPiNumber();
-  delay(50);
-  //send the black level
-  sendPiNumber(black_level);
-  delay(50);
-  endSendPiNumber();
-  delay(20);
-  for (int index = 0; index < (sizeof(outputLevels) / sizeof(int)); index++){
-    sendPiNumber(outputLevels[index]);
-    delay(50);
-    endSendPiNumber();
-    delay(20);
-  }
-  digitalWrite(piInitPin, LOW);
-  delay(3000); //let the pi do its thing
-}
-
-void sendPiNumber(int num){
-  for (byte i=0; i<numPins; i++) {
-    byte state = bitRead(num, i);
-    digitalWrite(pins[i], state);
-  }
-  //set pi rec pin high to tell it to look for this info
-  digitalWrite(piReceivePin, HIGH);
-}
-
-void endSendPiNumber(){
-  for (byte i=0; i<numPins; i++) {
-    digitalWrite(pins[i], LOW);
-  }
-  digitalWrite(piReceivePin, LOW);
-}
-
-void doPulsingStimIdx(){
-  //use global variables to handle pulsing for sending stim idx
-  //this is just used for daq comm
-  if (millis() >= nextPulseTime && pulsesSent < nextStimIdx){
-      if (pulsing == true){ //if its currently on, turn it off
-        digitalWrite(digOutPin, LOW);
-        nextPulseTime = millis() + 2;
-        pulsesSent++;
-        pulsing = false;
-        if (pulsesSent == nextStimIdx){
-          donePulsing = true;
-        }
-      } else{
-        digitalWrite(digOutPin, HIGH);
-        nextPulseTime = millis()+2;
-        pulsing = true;      
-      }
-  }
-}
-
-int getNextStimIdx(){
-    //for daq communication
-    int wantedval = stimVals[thisTrialNumber+1];
-    for (int i=0; i < (sizeof(outputLevels) / sizeof(int)); i++) {
-         if (wantedval == outputLevels[i]) {
-           nextStimIdx = i;
-           break;
-         }
-    }
-    nextStimIdx++; //add one bc matlab indexing is like that
-    return nextStimIdx;
-}
-    
-void checkSerial(){
-  //check serial for start/stop or prompt info
-  if (Serial.available()) {
-      val = Serial.read();
-      Serial.println(val);
-      if (val == '1')  {
-        isRunning = true;
-        daqReady = true;
-        if (init_pi == false){
-          initPiIntensities();
-          init_pi = true;
-        }
-        //nextTrialStart = nextTrialStart + 5000;
-      }
-  
-      if (val == '0') {
-        isRunning = false;
-        analogWrite(magnetPin, 0); // make sure mag and water are closed
-        digitalWrite(waterPin, LOW);
-        digitalWrite(piFAPin, LOW);
-      }
-
-      if (val == '2' & isRunning == false) {
-        digitalWrite(waterPin, HIGH);
-        delay(valveOpenTime*2);
-        digitalWrite(waterPin, LOW);
-        if (nextTrialStart<=millis()+1500) {
-          nextTrialStart = millis() + 1500; 
-        }
-      }
-      if (val == '3' & isRunning == false) {
-        if (visual==true){
-          sendPiNumber(126);
-          delay(50);
-          turnVisOn();
-          delay(200);
-          turnVisOff();
-        }
-        analogWrite(magnetPin,  250);
-        delay(300);
-        analogWrite(magnetPin,  0);
-        stimEndTime = millis() + 300; 
-        if (nextTrialStart<=millis()+1500) {
-          nextTrialStart = millis() + 1500; 
-        }
-      }
-      if (val=='4' & visual==true){
-        initPiIntensities();
-      }
-  }
-  //if debugging, even if serial isn't present, start
-  if (debug == true){ 
-    isRunning = true;
-  }
-}
-
-void sendBehaviorOutcome(){
-      //for daq comm, send pulses
-      if (stimVals[thisTrialNumber] == 0 && catchFA == true) {
-         for (int pulses = 0; pulses < 1; pulses++){
-            digitalWrite(digOutPin, HIGH);
-            delay(4);
-            digitalWrite(digOutPin, LOW);
-            delay(4);
-         }
-      }
-      if (stimVals[thisTrialNumber] == 0 && catchFA == false) {
-         for (int pulses = 0; pulses < 2; pulses++){
-            digitalWrite(digOutPin, HIGH);
-            delay(4);
-            digitalWrite(digOutPin, LOW);
-            delay(4);
-          }
-      }
-      if (stimVals[thisTrialNumber] > 0 && trialRewarded == false) {
-         for (int pulses = 0; pulses < 3; pulses++){
-            digitalWrite(digOutPin, HIGH);
-            delay(4);
-            digitalWrite(digOutPin, LOW);
-            delay(4);
-         }
-      }
-
-      if (stimVals[thisTrialNumber] > 0 && trialRewarded == true) {
-         for (int pulses = 0; pulses < 4; pulses++){
-            digitalWrite(digOutPin, HIGH);
-            delay(4);
-            digitalWrite(digOutPin, LOW);
-            delay(4);
-         }
-      }
 }
 
 void prepTrial(){
       if (visual==true){
         sendPiNumber(sizeVals[thisTrialNumber+1]);
-        delay(50);
-        endSendPiNumber();
-        delay(50);
+        delay(50); endSendPiNumber(); delay(50);
         sendPiNumber(stimVals[thisTrialNumber+1]);
       }
 }
 
 void startTrial(){
-      if (Rig == true && synch == true) {
-        Serial.println("hey hey");
-        daqReady = false;
-      }   
       thisTrialNumber=thisTrialNumber + 1;
-          
-      //SEND TRIGGER TO DAQ
-      digitalWrite(triggerPin,HIGH); 
-      getNextStimIdx(); //will change a global correctly
-    
-      //SET TIMER FOR STIMULUS ON
+
+      if (Rig == true && synch == true) {
+        daqReady = false;
+        //SEND TRIGGER TO DAQ
+        digitalWrite(triggerPin,HIGH); 
+        getNextStimIdx(); //will change a global correctly, is for daq comm
+      }   
+      
+      //SET TIMER FOR STIMULUS
       stimStartTime = millis() + stimDelayStart; 
       stimEndTime = stimStartTime + magOnTime; 
       //TIMER FOR PULSING
       nextPulseTime = millis() + stimDelayStart;
       //SET TIMER FOR REWARD PERIOD START
-      
       rewardPeriodStart = stimEndTime + responseDelay;
       //SET TIMER FOR REWARD PERIOD END
       rewardPeriodEnd = rewardPeriodStart + lickResponseWindow;
       trialStartTime = millis();
+      
+      endSendPiNumber(); //cease trial start signals
+      
 }
 
 void resetTrial(){
+  digitalWrite(triggerPin,LOW); //end trigger, ONLY MATTERS FOR RIG
   trialRewarded = false;
   catchFA = false;
   pulsesSent = 0;
@@ -431,85 +152,6 @@ void resetTrial(){
   donePulsing = false;
   nextTrialStart = millis() + ISIDistribution[thisTrialNumber]; //+1000;  // set time for next trial start  
 }
-
-
-bool isLicking(){    
-//get whether or not mouse is licking
-//sign of the signal is inverted depending on detector
-  bool lick=false;
-  if (Rig==false){
-    if(digitalRead(lickportPin) == LOW){
-      lick = true;
-    }
-  }else if (digitalRead(lickportPin) == HIGH ){
-      lick = true;
-  }
-  return lick;
-}
-
-void turnWaterOffOnTime(){
-  // close the water if its time to!
-  if (millis() >= valveCloseTime && waterPortOpen == true) {
-      digitalWrite(waterPin, LOW); //close the water
-      waterPortOpen = false;
-  }
-}
-
-void turnWaterOn(){
-  digitalWrite(waterPin, HIGH); //open the water
-  valveCloseTime = millis() + valveOpenTime; //mark time to close valve
-  trialRewarded = true;
-  cumRewards++;
-  waterPortOpen = true;
-}
-
-
-void turnTimeOutSignalOffOnTime(){
-  // close the water if its time to!
-  if (millis() >= timeOutSignalEnd && timeOutSignalOn == true) {
-      digitalWrite(piFAPin, LOW); //close the water
-      timeOutSignalOn = false;
-  }
-}
-
-
-void turnTimeOutSignalOn(){
-  if (do_timeout==true){
-    //digitalWrite(piFAPin, HIGH); //open the water
-    
-    tone(8, 6048, timeOutToneTime);
-    timeOutSignalEnd = millis() + timeOutSignalTime; //mark time to stop signal
-    //generateNoiseSound();
-    timeOutSignalOn = true;
-  }
-}
-
-
-void turnMagOn(){
-  analogWrite(magnetPin,  stimVals[thisTrialNumber]);  // put voltage on the magnet
-  digitalWrite(stimIndicatorPin,HIGH);
-  magnetOn = true; //for serial
-}
-
-void turnMagOff(){
-  analogWrite(magnetPin,  0);  // put voltage on the magnet
-  digitalWrite(stimIndicatorPin,LOW);
-  magnetOn = false; //for serial
-}
-
-void turnVisOn(){
-  magnetOn = true;
-  digitalWrite(piOnPin, HIGH);
-  digitalWrite(stimIndicatorPin, HIGH);
-}
-
-void turnVisOff(){
-  magnetOn = false;
-  digitalWrite(piOnPin, LOW);
-  digitalWrite(stimIndicatorPin, LOW);
-}
-
-
 
 
 //--------------------------------------------------///
@@ -522,6 +164,7 @@ void loop() {
   //if its running, do trial things.
   if (isRunning == true) {
       prepTrial(); //send values to pi
+        
       //first, begin in the ISI stage, hold in this while loop
       while (millis() < nextTrialStart || daqReady==false){
         falseAlarm = false;  //reset this 
@@ -529,9 +172,7 @@ void loop() {
             
         //RIG ONLY: if daq is not yet ready, check if ready
         if (daqReady == false){
-          if (digitalRead(readyToGoPin)==HIGH) {
-            daqReady = true;
-          }
+          daqReady = isDaqReady();
           //whether it just became ready or we're still waiting, still want to add 500ms
           if (nextTrialStart<=millis()+500) {
             nextTrialStart = millis() + 500; 
@@ -549,56 +190,38 @@ void loop() {
         sendSerial();
         checkSerial();
       }
-      // just in case
-      digitalWrite(piFAPin, LOW);
-      timeOutSignalOn = false;
+        
+      // just in case, shutoff timeout signals
+      digitalWrite(piFAPin, LOW);  timeOutSignalOn = false;
 
       startTrial(); // initialize trial
 
-      //then wait for the stimulus start
-      while (millis()<=stimStartTime){
+      while (millis()<=stimStartTime){ //wait till stim on
         sendSerial();
       }
       
-      digitalWrite(triggerPin,LOW); //end trigger, ONLY MATTERS FOR RIG
-      if (visual==true){
-        turnVisOn();
-        endSendPiNumber(); //cease trial start signals
-      } else{
-        turnMagOn(); //start mag
-      }
+      turnStimOn(); //stim goes on
       
       while (millis() < stimEndTime) { //during stim presentation
         sendSerial();
-        if (Rig==true){
-          doPulsingStimIdx();
-        }
+        if (Rig==true){doPulsingStimIdx();}
       }
+      
+      turnStimOff(); //stim goes off
 
-      if (visual==true){
-        turnVisOff();
-      } else{
-        turnMagOff();
-      }
-
-      //then wait for the reward period
-      while (millis() < rewardPeriodStart){
+      while (millis() < rewardPeriodStart){ //then wait for the reward period
         sendSerial();
-        if (Rig==true){
-          doPulsingStimIdx();
-        }
+        if (Rig==true){doPulsingStimIdx();}
       }
-
-      //then begin the reward period
+        
+      //begin + handle reward period
       isResponseWindow = true;
-      //if autoreward, begin giving water
-      if (autoReward == true){
+      if (autoReward == true){ //if autoreward, begin giving water
         turnWaterOn();
       }
-      //handle the reward window
+      
       while ((millis()>= rewardPeriodStart) && (millis()<rewardPeriodEnd))  {
-          if (autoReward == false && trialRewarded == false){
-            if (isLicking()==true){
+            if (isLicking()==true && autoReward == false && trialRewarded == false){
               if (stimVals[thisTrialNumber]>0){
                 turnWaterOn();
               } else {
@@ -606,30 +229,31 @@ void loop() {
                 turnTimeOutSignalOn();
               }
             }
-          }
-          if (Rig==true){
-            doPulsingStimIdx();
-          }
+          
+          if (Rig==true){doPulsingStimIdx();}
+          
           turnWaterOffOnTime();
           turnTimeOutSignalOffOnTime();
           sendSerial();
       }
       //just in case, turn off water
-      digitalWrite(waterPin, LOW); //close the water
-      waterPortOpen = false;
+      digitalWrite(waterPin, LOW); waterPortOpen = false;
       isResponseWindow = false;
       sendSerial();
+        
       //make sure we finished sending mag stim idx pulses
       while (donePulsing==false && Rig==true){
         doPulsingStimIdx();
       }
-      turnTimeOutSignalOffOnTime();
-      //send behavior outcome triggers 1=FA,2=CR,3=MS,4=HT
+      
+        
       if (Rig==true){
         sendBehaviorOutcome();
       }
-      turnTimeOutSignalOffOnTime();
+        
+      //now add the time part of the time out
       timeOutEnd = rewardPeriodEnd + random(timeOutDurationMin,timeOutDurationMax);
+        
       // give a timeout for catch false alarm licking
       if (catchFA){
             while (millis()<=timeOutEnd){
@@ -644,166 +268,6 @@ void loop() {
       
       resetTrial(); 
       sendSerial();
-  }
-}
-
-
-
-void sendSerial(){
-  Serial.print(millis());//millis() - trialStartTime);
-  Serial.print(",");
-  Serial.print(thisTrialNumber);
-  Serial.print(",");
-  Serial.print(trialRewarded);
-  Serial.print(",");
-  //actually check if lickport is high each time
-  Serial.print(isLicking());
-  Serial.print(",");
-  Serial.print(stimVals[thisTrialNumber]);
-  Serial.print(",");
-  Serial.print(isResponseWindow);
-  Serial.print(",");
-  Serial.print(magnetOn);
-  Serial.print(",");
-  Serial.print(waterPortOpen);
-  Serial.print(",");
-  Serial.print(falseAlarm);
-  Serial.print(",");
-  Serial.println(sizeVals[thisTrialNumber]);
-}
-
-
-void populateTrials() {
-  int arraySum;
-  arraySum = 0;
-  int output_size = 0;
-  for (int index = 0; index < (sizeof(outputWeights) / sizeof(int)); index++){
-    if (outputWeights[index] != 0){
-      output_size++;
-    }
-  }
-  for (int index = 0; index < output_size; index++){
-    arraySum += outputWeights[index];
-  }
-  //populate an array containing all the necessary duplicatses...
-  int weightedOutputs[arraySum];
-  int i = 0;
-  for (int n = 0; n < output_size; n++) {
-    for (int k = 0; (k < outputWeights[n]); k++) {
-
-      weightedOutputs[i] = outputLevels[n];
-      i++;
-    }
-  }
-
-  i = 0;
-  int arrLen = sizeof(weightedOutputs) / sizeof(int);
-  int rand_n;
-  while (i < trialNumber) {
-    bubbleUnsort(weightedOutputs, arrLen);       //randomize the weighted trial lengths
-
-    for (int n = 0; n < (sizeof(weightedOutputs) / sizeof(int)); n++) {
-      stimVals[i] = weightedOutputs[n];
-      ISIDistribution[i] = random(isiMin, isiMax); //random isi distribution
-      rand_n = random(1,100);
-      if (rand_n>50){
-            sizeVals[i] = grate_size1;
-      } else{
-            sizeVals[i] = grate_size2;
-      }
-      i++;
-    }
-  }
-}//END POPULATE TRIALS
-
-
-
-void bubbleUnsort(int *list, int elem){
-  for (int a = elem - 1; a > 0; a--){
-    int r = random(a + 1);
-    //int r = rand_range(a+1);
-    if (r != a){
-      int temp = list[a];
-      list[a] = list[r];
-      list[r] = temp;
-    }
-  }
-}
-// generate a value between 0 <= x < n, thus there are n possible outputs
-int rand_range(int n){
-  int r, ul;
-  ul = RAND_MAX - RAND_MAX % n;
-  while ((r = random(RAND_MAX + 1)) >= ul);
-  //r = random(ul);
-  return r % n;
-}
-
-
-// timers TC0 TC1 TC2   channels 0-2 ids 0-2  3-5  6-8     AB 0 1
-// use TC1 channel 0 
-#define TONE_TIMER TC1
-#define TONE_CHNL 0
-#define TONE_IRQ TC3_IRQn
-
-// TIMER_CLOCK4   84MHz/128 with 16 bit counter give 10 Hz to 656KHz
-//  piano 27Hz to 4KHz
-
-static uint8_t pinEnabled[PINS_COUNT];
-static uint8_t TCChanEnabled = 0;
-static boolean pin_state = false ;
-static Tc *chTC = TONE_TIMER;
-static uint32_t chNo = TONE_CHNL;
-
-volatile static int32_t toggle_count;
-static uint32_t tone_pin;
-
-// frequency (in hertz) and duration (in milliseconds).
-
-void tone(uint32_t ulPin, uint32_t frequency, int32_t duration)
-{
-    const uint32_t rc = VARIANT_MCK / 256 / frequency; 
-    tone_pin = ulPin;
-    toggle_count = 0;  // strange  wipe out previous duration
-    if (duration > 0 ) toggle_count = 2 * frequency * duration / 1000;
-     else toggle_count = -1;
-
-    if (!TCChanEnabled) {
-      pmc_set_writeprotect(false);
-      pmc_enable_periph_clk((uint32_t)TONE_IRQ);
-      TC_Configure(chTC, chNo,
-        TC_CMR_TCCLKS_TIMER_CLOCK4 |
-        TC_CMR_WAVE |         // Waveform mode
-        TC_CMR_WAVSEL_UP_RC ); // Counter running up and reset when equals to RC
-  
-      chTC->TC_CHANNEL[chNo].TC_IER=TC_IER_CPCS;  // RC compare interrupt
-      chTC->TC_CHANNEL[chNo].TC_IDR=~TC_IER_CPCS;
-       NVIC_EnableIRQ(TONE_IRQ);
-                         TCChanEnabled = 1;
-    }
-    if (!pinEnabled[ulPin]) {
-      pinMode(ulPin, OUTPUT);
-      pinEnabled[ulPin] = 1;
-    }
-    TC_Stop(chTC, chNo);
-                TC_SetRC(chTC, chNo, rc);    // set frequency
-    TC_Start(chTC, chNo);
-}
-
-void noTone(uint32_t ulPin)
-{
-  TC_Stop(chTC, chNo);  // stop timer
-  digitalWrite(ulPin,LOW);  // no signal on pin
-}
-
-// timer ISR  TC1 ch 0
-void TC3_Handler ( void ) {
-  TC_GetStatus(TC1, 0);
-  if (toggle_count != 0){
-    // toggle pin  TODO  better
-    digitalWrite(tone_pin,pin_state= !pin_state);
-    if (toggle_count > 0) toggle_count--;
-  } else {
-    noTone(tone_pin);
   }
 }
 
