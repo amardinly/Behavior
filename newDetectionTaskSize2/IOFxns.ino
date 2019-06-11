@@ -20,6 +20,11 @@ bool isDaqReady(){
   } else{
     dR = false;
   }
+  
+  //whether it just became ready or we're still waiting, still want to add 500ms
+  if (nextTrialStart<=millis()+500) {
+    nextTrialStart = millis() + 500; 
+  }
   return dR
 }
 
