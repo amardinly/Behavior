@@ -28,6 +28,15 @@ bool isDaqReady(){
   return dR
 }
 
+void turnLEDOn(){
+  //define later 
+  return;
+}
+
+void turnLEDOff(){
+  return;
+}
+
 void turnWaterOffOnTime(){
   // close the water if its time to!
   if (millis() >= valveCloseTime && waterPortOpen == true) {
