@@ -13,6 +13,16 @@ bool isLicking(){
   return lick;
 }
 
+bool isDaqReady(){
+  bool dR = false;
+  if (digitalRead(readyToGoPin)==HIGH) {
+    dR = true;
+  } else{
+    dR = false;
+  }
+  return dR
+}
+
 void turnWaterOffOnTime(){
   // close the water if its time to!
   if (millis() >= valveCloseTime && waterPortOpen == true) {
@@ -50,6 +60,15 @@ void turnTimeOutSignalOn(){
   }
 }
 
+void turnStimOn(){
+  if (visual==true){turnVisOn();}
+  else{turnMagOn();}
+}
+
+void turnStimOff(){
+  if (visual==true){turnVisOff();}
+  else{turnMagOff();}
+}
 
 void turnMagOn(){
   analogWrite(magnetPin,  stimVals[thisTrialNumber]);  // put voltage on the magnet
