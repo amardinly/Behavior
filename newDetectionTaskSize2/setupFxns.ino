@@ -56,21 +56,24 @@ void chooseParams() {
 void populateTrials() {
   int arraySum;
   arraySum = 0;
+  //the number of weights actually being used
   int output_size = 0;
   for (int index = 0; index < (sizeof(outputWeights) / sizeof(int)); index++){
     if (outputWeights[index] != 0){
       output_size++;
     }
   }
+  //the total size of all weights added together
   for (int index = 0; index < output_size; index++){
     arraySum += outputWeights[index];
   }
   //populate an array containing all the necessary duplicatses...
   int weightedOutputs[arraySum];
   int i = 0;
+  //for each unique contrast and associated weight
   for (int n = 0; n < output_size; n++) {
+    //duplicate it weights number of times
     for (int k = 0; (k < outputWeights[n]); k++) {
-
       weightedOutputs[i] = outputLevels[n];
       i++;
     }
