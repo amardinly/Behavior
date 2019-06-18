@@ -72,6 +72,8 @@ void sendSerial(){
   Serial.print(falseAlarm);
   Serial.print(",");
   Serial.println(sizeVals[thisTrialNumber]);
+  Serial.print(",");
+  Serial.println(isOpto);
 }
 
 void establishContact() {
