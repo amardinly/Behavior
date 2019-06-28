@@ -145,11 +145,8 @@ void sendSerial(){
   Serial.print(",");
 
   Serial.print(sizeVals[thisTrialNumber]);
-
   Serial.print(",");
-
   Serial.println(isOpto);
-
 }
 
 

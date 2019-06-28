@@ -62,9 +62,7 @@ bool isDaqReady(){
 
 void turnLEDOn(){
 
-  //define later 
-
-  analogWrite(LEDPin,140)
+analogWrite(LEDPin,140);
 
 }
 
@@ -72,7 +70,7 @@ void turnLEDOn(){
 
 void turnLEDOff(){
 
-  analogWrite(LEDPin,0)
+  analogWrite(LEDPin,0);
 
 }
 
