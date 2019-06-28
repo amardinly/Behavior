@@ -1,7 +1,7 @@
 void setupPins(){
   pinMode(magnetPin, OUTPUT);
   pinMode(waterPin, OUTPUT);
-  pinMode(LEDpin, OUTPUT);
+  pinMode(LEDPin, OUTPUT);
   pinMode(lickportPin, INPUT);  // OR INTERRUPT
   analogWrite(magnetPin, 0); // make sure mag and water are closed
   digitalWrite(waterPin, LOW);
@@ -39,12 +39,8 @@ void chooseParams() {
       }
       if (state==3) {
           autoReward = false;
-          int theLevels[10]={0,4,8,16,32,64,128,180,220,255};
-          int theWeights[10] = {1,1, 1, 1, 1, 1, 1,1,1,1};
-          //if (visual==true){
-          //  int theLevels[8]={0,20,  35,  50,   80, 95,  110,   125};//{0,60,100,130,160,190,220,250};
-          //  int theWeights[8] = {1, 1, 1, 1, 1, 1};
-          //}
+           int theLevels[8]={0,4,16,64,128,180,220,255};
+          int theWeights[8] = {1,1, 1, 1, 1, 1, 1,1};
           for (int index = 0; index < (sizeof(theWeights) / sizeof(int)); index++){
             outputLevels[index] = theLevels[index];
             outputWeights[index] = theWeights[index];
