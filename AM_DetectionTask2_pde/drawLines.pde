@@ -11,6 +11,7 @@ public void drawLines() {
       //myLED[i] = myLED[i+1];
       //myTA[i] = myTA[i+1];
       //myLickL[i] = myLickL[i+1];
+      mySizeVal[i] = mySizeVal[i+1];
       myStimVal[i]=myStimVal[i+1];
      // println(mx[i]);
       myLick[i] = myLick[i+1];
@@ -31,6 +32,9 @@ public void drawLines() {
     
     float startingHight = 0.85;
    // println(stimVoltage);
+   
+    mySizeVal[mySizeVal.length-1] = int(ScreenSizeH*(startingHight-.04) - (magnetOn*(aSize/100)*tickHeight));
+    text("stimSize", ScreenSizeW*0.005, ScreenSizeH*(startingHight-.04));
     myStimVal[myStimVal.length-1] = int(ScreenSizeH*(startingHight) - (magnetOn*(stimVoltage/255)*tickHeight));
     text("stimVoltage", ScreenSizeW*0.005, ScreenSizeH*(startingHight));
     
@@ -53,7 +57,8 @@ public void drawLines() {
       if (mx[i+1]==width/12) {
         continue;
       } else {
-
+        stroke(250, 250, 250);     //stroke color
+        line(mx[i+1], mySizeVal[i+1], mx[i], mySizeVal[i]);
         stroke(250, 250, 250);     //stroke color
         line(mx[i+1], myStimVal[i+1], mx[i], myStimVal[i]);
         stroke(128, 0, 128);     //stroke color

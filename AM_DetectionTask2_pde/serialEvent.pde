@@ -47,8 +47,9 @@ if (canStart) {
      magnetOn = values[6];
      waterPortOpen = values[7];
      falseAlarm = values[8];
-    //println(falseAlarm);
      
+     aSize = values[9];
+    //println(falseAlarm);
      updateBehaviorStats(); 
      }
    }
