@@ -13,8 +13,8 @@ bool do_timeout = true;
 int state = 1;
 bool autoReward;
 bool doOpto = true;
-int outputLevels[12];
-int outputWeights[12];
+int conditions[35][2];
+int conditionWeights[35];
 int black_level = 0;
 int grate_size1 = 100;
 int grate_size2 = 600;
@@ -33,6 +33,7 @@ int trialStartTime = 2000;
 int ISIDistribution[1050];  ///pad extra to prevent errors
 int stimVals[1050];
 int sizeVals[1050];
+int optoVals[1050];
 int stimDelayStart = 50;  // send a trigger to the DAQ 50 ms before stimulus
 int magOnTime = 600;  //duration of magnet on time
 int valveOpenTime = 50; //millis that the H20 valve is open
@@ -43,7 +44,7 @@ int timeOutDurationMin = 5000;
 int timeOutDurationMax = 9000;  
 int timeOutSignalTime = 1000;
 int timeOutToneTime = 1000;
-int optoPercent = 33;
+int optoWeights[3] = {3,1};
 
 
 
@@ -158,35 +159,22 @@ int genISI(int mint, int maxt){
 
 
 bool setIsOpto(){
-
-  isOpto = random(101) < optoPercent-1;
-
+  isOpto = optoVals[thisTrialNumber];
   if (isOpto==true){
-
     turnLEDOn();
-
   } else {
-
     turnLEDOff();
-
   }
-
 }
 
 
 
 void prepTrial(){
-
       if (visual==true){
-
         sendPiNumber(sizeVals[thisTrialNumber+1]);
-
         delay(50); endSendPiNumber(); delay(50);
-
         sendPiNumber(stimVals[thisTrialNumber+1]);
-
       }
-
 }
 
 
@@ -240,31 +228,21 @@ void startTrial(){
 
 
 void resetTrial(){
-
   digitalWrite(triggerPin,LOW); //end trigger, ONLY MATTERS FOR RIG
-
   trialRewarded = false;
-
   catchFA = false;
-
   pulsesSent = 0;
-
   nextStimIdx = 0;
-
   donePulsing = false;
-
   
-
-  nextTrialStart = millis() + ISIDistribution[thisTrialNumber]; //+1000;  // set time for next trial start 
+  nextTrialStart = millis() + random(isiMin,isiMax); //+1000;  // set time for next trial start 
 
   if (altISI==true){
-
     nextTrialStart = millis() + genISI(isiMin, isiMax);
-
   }
 
   gracePeriodEnd = millis() + timeOutSignalTime;
-
+  setIsOpto();
 }
 
 
@@ -335,7 +313,7 @@ void loop() {
 
           if (lickOccured == true && timeOutSignalOn == false && millis()>gracePeriodEnd){
 
-            setIsOpto(); //randomly select opto or not and turn LED on or off
+            //setIsOpto(); //randomly select opto or not and turn LED on or off
 
             nextTrialStart = millis() + genISI(isiMin, isiMax); //could also be TO min + max
 

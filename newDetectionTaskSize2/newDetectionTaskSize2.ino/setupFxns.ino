@@ -25,73 +25,157 @@ void setupPins(){
 }
 
 void chooseParams() {
+    
       // set autoreward and contrast levels based on state chosen
       if (state==1) {
-          autoReward = true;
-          outputLevels[0] = 250;
-          outputWeights[0] = 1;
+          int theLevels_s1[1]={250};
+          int theWeights_s1[1] = {1};       
+          int theLevels_s2[1]={250};
+          int theWeights_s2[1] = {1};
+          
+          for (int index = 0; index < (sizeof(theWeights_s1) / sizeof(int)); index++){
+            conditions[index][0] = grate_size1;
+            conditions[index][1] = theLevels_s1[index];
+            conditionWeights[index] = theWeights_s1[index];
+          }
+          
+          int add_to_index = (sizeof(theWeights_s1) / sizeof(int));
+          for (int index = 0;
+            index < (sizeof(theWeights_s2) / sizeof(int));
+            index++){
+                conditions[index+add_to_index][0] = grate_size2;
+                conditions[index+add_to_index][1] = theLevels_s2[index];
+                conditionWeights[index+add_to_index] = theWeights_s2[index];
+          }
       }
       if (state==2) {
           autoReward = false;
-          outputLevels[0] = 0;
-          outputLevels[1] = 250;
-          outputWeights[0] = 1;
-          outputWeights[1] = 4;
+         int theLevels_s1[2]={0,250};
+          int theWeights_s1[2] = {1,4};       
+          int theLevels_s2[2]={0,250};
+          int theWeights_s2[2] = {1,4};
+          
+          for (int index = 0; index < (sizeof(theWeights_s1) / sizeof(int)); index++){
+            conditions[index][0] = grate_size1;
+            conditions[index][1] = theLevels_s1[index];
+            conditionWeights[index] = theWeights_s1[index];
+          }
+          
+          int add_to_index = (sizeof(theWeights_s1) / sizeof(int));
+          for (int index = 0;
+            index < (sizeof(theWeights_s2) / sizeof(int));
+            index++){
+                conditions[index+add_to_index][0] = grate_size2;
+                conditions[index+add_to_index][1] = theLevels_s2[index];
+                conditionWeights[index+add_to_index] = theWeights_s2[index];
+          }
       }
       if (state==3) {
           autoReward = false;
-           int theLevels[8]={0,4,16,64,128,180,220,255};
-          int theWeights[8] = {1,1, 1, 1, 1, 1, 1,1};
-          for (int index = 0; index < (sizeof(theWeights) / sizeof(int)); index++){
-            outputLevels[index] = theLevels[index];
-            outputWeights[index] = theWeights[index];
+          
+          int theLevels_s1[6]={0,4,16,64,180,255};
+          int theWeights_s1[6] = {1,1, 1, 1, 1, 1};
+          int theLevels_s2[6]={0,2,6,32,64,255};
+          int theWeights_s2[6] = {1,1, 1, 1, 1, 1};
+          
+          for (int index = 0; index < (sizeof(theWeights_s1) / sizeof(int)); index++){
+            conditions[index][0] = grate_size1;
+            conditions[index][1] = theLevels_s1[index];
+            conditionWeights[index] = theWeights_s1[index];
+          }
+          
+          int add_to_index = (sizeof(theWeights_s1) / sizeof(int));
+          for (int index = 0;
+            index < (sizeof(theWeights_s2) / sizeof(int));
+            index++){
+                conditions[index+add_to_index][0] = grate_size2;
+                conditions[index+add_to_index][1] = theLevels_s2[index];
+                conditionWeights[index+add_to_index] = theWeights_s2[index];
           }
       }
 }
 
 
-void populateTrials() {
-  int arraySum;
-  arraySum = 0;
-  //the number of weights actually being used
-  int output_size = 0;
-  for (int index = 0; index < (sizeof(outputWeights) / sizeof(int)); index++){
-    if (outputWeights[index] != 0){
+void populateTrials() {int output_size = 0;
+    for (int index = 0; index < (sizeof(conditionWeights) / sizeof(int)); index++){
+    if (conditionWeights[index] != 0){
       output_size++;
     }
   }
-  //the total size of all weights added together
+
+  int arraySum = 0;
   for (int index = 0; index < output_size; index++){
-    arraySum += outputWeights[index];
+    arraySum += conditionWeights[index];
   }
-  //populate an array containing all the necessary duplicatses...
-  int weightedOutputs[arraySum];
+  
+  int weightedOutputs[arraySum][2];
   int i = 0;
   //for each unique contrast and associated weight
   for (int n = 0; n < output_size; n++) {
     //duplicate it weights number of times
-    for (int k = 0; (k < outputWeights[n]); k++) {
-      weightedOutputs[i] = outputLevels[n];
+    for (int k = 0; (k < conditionWeights[n]); k++) {
+      weightedOutputs[i][0] = conditions[n][0];
+      weightedOutputs[i][1] = conditions[n][1];
       i++;
     }
   }
-
-  i = 0;
-  int arrLen = sizeof(weightedOutputs) / sizeof(int);
-  int rand_n;
-  while (i < trialNumber) {
-    bubbleUnsort(weightedOutputs, arrLen);       //randomize the weighted trial lengths
-
-    for (int n = 0; n < (sizeof(weightedOutputs) / sizeof(int)); n++) {
-      stimVals[i] = weightedOutputs[n];
-      ISIDistribution[i] = random(isiMin, isiMax); //random isi distribution
-      rand_n = random(1,100);
-      if (rand_n>50){
-            sizeVals[i] = grate_size1;
-      } else{
-            sizeVals[i] = grate_size2;
+  int arraySumTwo;
+  if (doOpto==1){
+      arraySumTwo = optoWeights[0]*arraySum + optoWeights[1]*arraySum;
+  }else{
+      arraySumTwo = arraySum*2;
+  }
+  
+  int weightedOptoOutputs[arraySumTwo][3];
+  int conditionIndexes[arraySumTwo];
+  
+  if (doOpto==1){
+      // then we'll duplicate that whole array, and give the firs thalf non opto weights
+      int wCondInd=0;
+      for (int optoCond=0; optoCond < 2; optoCond++){ // each opto condition
+          for (int k = 0; k < arraySum; k++) { // for all weights + conditions
+              for (int optoW = 0; optoW < optoWeights[optoCond]; optoW++){
+                  weightedOptoOutputs[wCondInd][0] = weightedOutputs[k][0];
+                  weightedOptoOutputs[wCondInd][1] = weightedOutputs[k][1];
+                  weightedOptoOutputs[wCondInd][2] = optoCond;
+                  conditionIndexes[wCondInd] = wCondInd;
+                  
+                  wCondInd++;
+              }
+            }
+          }
+  }
+  else{
+      //just duplicate it for randomizing purposes I guess
+      int i=0;
+      for (int n=0; n < 2; n++){
+          weightedOptoOutputs[i][0] = weightedOutputs[i][0];
+          weightedOptoOutputs[i][1] = weightedOutputs[i][1];
+          weightedOptoOutputs[i][2] = 0;
+          conditionIndexes[i] = i;
+          i++;
       }
-      i++;
+  }  
+  
+  int k = 0;
+  int arrLen = sizeof(conditionIndexes) / sizeof(int);
+
+  while (k < trialNumber) {
+    for (int a = arrLen - 1; a > 0; a--){
+        int r = random(0,a);
+        if (r != a){
+          int temp = conditionIndexes[a];
+         conditionIndexes[a] = conditionIndexes[r];
+          conditionIndexes[r] = temp;
+       }
+    }
+    for (int n = 0; n < (sizeof(conditionIndexes) / sizeof(int)); n++) {
+      int condInd = conditionIndexes[n];
+      sizeVals[k] = weightedOptoOutputs[condInd][0];
+      stimVals[k] = weightedOptoOutputs[condInd][1];
+      optoVals[k] = weightedOptoOutputs[condInd][2];
+         
+      k++;
     }
   }
 }//END POPULATE TRIALS

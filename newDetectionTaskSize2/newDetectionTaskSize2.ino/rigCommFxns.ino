@@ -1,15 +1,16 @@
 
 int getNextStimIdx(){
     //for daq communication
-    int wantedval = stimVals[thisTrialNumber+1];
-    for (int i=0; i < (sizeof(outputLevels) / sizeof(int)); i++) {
-         if (wantedval == outputLevels[i]) {
-           nextStimIdx = i;
-           break;
-         }
-    }
-    nextStimIdx++; //add one bc matlab indexing is like that
-    return nextStimIdx;
+    //int wantedval = stimVals[thisTrialNumber+1];
+    //for (int i=0; i < (sizeof(outputLevels) / sizeof(int)); i++) {
+    //     if (wantedval == outputLevels[i]) {
+    //       nextStimIdx = i;
+    //       break;
+    //     }
+    //}
+    //nextStimIdx++; //add one bc matlab indexing is like that
+    //return nextStimIdx;
+    return 0;
 }
 
 void doPulsingStimIdx(){

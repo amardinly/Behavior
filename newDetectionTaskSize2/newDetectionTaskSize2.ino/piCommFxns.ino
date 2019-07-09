@@ -31,8 +31,8 @@ void initPiIntensities(){
   delay(50);
   endSendPiNumber();
   delay(20);
-  for (int index = 0; index < (sizeof(outputLevels) / sizeof(int)); index++){
-    sendPiNumber(outputLevels[index]);
+  for (int index = 0; index < (sizeof(conditionWeights) / sizeof(int)); index++){
+    sendPiNumber(conditions[1][index]);
     delay(50);
     endSendPiNumber();
     delay(20);
