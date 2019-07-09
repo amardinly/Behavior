@@ -2,38 +2,22 @@
 // state1 = autorreward (auto)
 // state2 = add catch trials  (S2)
 // state3 = pyschometric curve (S3)
-
 // state4 = weighted psy curve (S4)
-
 bool Rig = false;
-
 bool synch = false;
-
 bool visual = true;
-
 bool do_timeout = true;
 
 //these variables are dependent on state/set by processing
 
 int state = 1;
-
 bool autoReward;
-
 bool doOpto = true;
-
 int outputLevels[12];
-
 int outputWeights[12];
-
 int black_level = 0;
-
 int grate_size1 = 100;
-
-int grate_size2 = 200;
-
-
-
-
+int grate_size2 = 600;
 
 bool altISI = true;
 
@@ -42,63 +26,37 @@ bool altISI = true;
 
 
 //Init Exp Defaults
-
 int isiMin = 3000;//as in petersen paper
-
 int isiMax = 9000;// 5/6 changed to 9000 //2/25 changed from 8000 as in petersen paper
-
 int trialNumber = 1000;  // num trials to allow
-
 int trialStartTime = 2000;
-
 int ISIDistribution[1050];  ///pad extra to prevent errors
-
 int stimVals[1050];
-
 int sizeVals[1050];
-
 int stimDelayStart = 50;  // send a trigger to the DAQ 50 ms before stimulus
-
 int magOnTime = 600;  //duration of magnet on time
-
 int valveOpenTime = 50; //millis that the H20 valve is open
-
 int lickResponseWindow = 1000;//amount of time mice have to response
-
 int responseDelay = 0;  //time btween stim offset and answer period
-
 int preTrialNoLickTime = 2000;// no licks before trial or we trigger a false alarm
-
 int timeOutDurationMin = 5000;  
-
 int timeOutDurationMax = 9000;  
-
 int timeOutSignalTime = 1000;
-
 int timeOutToneTime = 1000;
-
-int optoTrialPercent = 33;
+int optoPercent = 33;
 
 
 
 //Specify pins
-
 int lickportPin = 5;
-
+int LEDPin = 2;
 int waterPin = 9;  
-
 int magnetPin = 11;
-
 int triggerPin = 12;
-
 int analogPin = 3;
-
 int readyToGoPin = 4;
-
 int digOutPin = 7;
-
 int stimIndicatorPin = 13;
-
 int tonePin = 8;
 
 
@@ -106,15 +64,10 @@ int tonePin = 8;
 //set the visual pins
 
 int piOnPin = 33; //tell pi to turn stim on
-
 int piInitPin = 34; //tell pi to turn stim off
-
 int piReceivePin = 35; //tell pi to receive next trial stim info
-
 const byte numPins = 8;
-
 byte pins[] = {36, 37, 38, 39, 40, 41, 42, 43}; //pins for writing binary info
-
 int piFAPin = 44;
 
 
@@ -124,79 +77,46 @@ int piFAPin = 44;
 //init vars altered during trials
 
 int thisTrialNumber = 0;
-
 bool stimTime = false;
-
 bool trialRunning = false;
-
 bool lickOccured = false;
-
 bool isResponseWindow = false;
-
 bool initTrial = true;
-
 bool trialRewarded = false;
-
 bool falseAlarm = false;
-
 bool magnetOn = false;
-
 bool waterPortOpen = false;
-
 bool isRunning = false;
-
 bool debug = false;
-
 bool daqReady = true;
-
 bool catchFA = false;
-
 bool pulsing = false;
 
 String readString;
 
 int valveCloseTime = 0;  
-
 int nextTrialStart = 5000;  //5 sec baseline before we start stuff
-
 int turnOffStim = 0;
-
 int turnOffResponseWindow = 0;
-
 int cumRewards = 0;
-
 bool init_pi = false;
 
 int stimStartTime = 0;
-
 int stimEndTime = 0;
-
 int rewardPeriodStart =0;
-
 int rewardPeriodEnd = 0;
-
 int lickCounter = 0;
-
 int pulsesSent = 0;
-
 int nextPulseTime = 0;
-
 int nextStimIdx = 0;
-
 int timeOutEnd = 0;
-
 int gracePeriodEnd = 0;
-
 bool timeOutSignalOn = false;
-
 int timeOutSignalEnd = 0;
 
 bool isOpto = false;
-
 bool ledOn = false;
-
 bool donePulsing = false;
-
 char val;  //data received from serial port
 
 
@@ -223,13 +143,15 @@ void setup() {
 
 
 
-}
+
 int genISI(int mint, int maxt){
-  double min = double(mint);
-  double max = double(maxt);
-  double q = 2/(max-min);
-  double R = double(random(1,1001))/double(1000); //won't generate doubles so gotta do it this way
-  double isi = -1/q*log(exp(-q*min)- (exp(-q*min)-exp(-q*max))*R);
+  // 7/9 switched back to uniform while awaiting new plan
+  //double min = double(mint);
+  //double max = double(maxt);
+  //double q = 2/(max-min);
+  //double R = double(random(1,1001))/double(1000); //won't generate doubles so gotta do it this way
+  //double isi = -1/q*log(exp(-q*min)- (exp(-q*min)-exp(-q*max))*R);
+  int isi = random(mint,maxt);
   return int(isi);
 }
 

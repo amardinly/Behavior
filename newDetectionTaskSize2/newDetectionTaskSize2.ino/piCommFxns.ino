@@ -3,12 +3,18 @@ void initPiIntensities(){
   //send a series of intensities to tell the pi what 
   //values to prepare.
   Serial.println("starting pi intensities");
+  Serial.print("state is ");
+  Serial.println(state);
   Serial.print("size 1 is ");
   Serial.println(grate_size1);
   Serial.print("size 2 is ");
   Serial.println(grate_size2);
   Serial.print("black level is ");
   Serial.println(black_level);
+  Serial.print("altISI is ");
+  Serial.println(altISI);
+  Serial.print("doOpto is ");
+  Serial.println(doOpto);
   digitalWrite(piInitPin, HIGH);
   delay(100);
   //first, send sizes

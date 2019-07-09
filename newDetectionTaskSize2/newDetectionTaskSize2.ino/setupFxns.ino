@@ -2,6 +2,7 @@ void setupPins(){
   pinMode(magnetPin, OUTPUT);
   pinMode(waterPin, OUTPUT);
   pinMode(LEDPin, OUTPUT);
+
   pinMode(lickportPin, INPUT);  // OR INTERRUPT
   analogWrite(magnetPin, 0); // make sure mag and water are closed
   digitalWrite(waterPin, LOW);

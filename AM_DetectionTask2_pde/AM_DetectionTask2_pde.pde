@@ -63,6 +63,7 @@ boolean startedRecording = false;
             
 float mx[] = new float[num]; //x time series
 int myStimVal[] = new int[num]; //x time series
+int mySizeVal[] = new int[num];
 int myLick[] = new int[num]; //target area
 int myRewardPeriod[] = new int[num]; //licking left
 int myReward[] = new int[num]; //licking right
@@ -98,6 +99,7 @@ int xPos=0; //current x position
               float trialRewarded=0;
               float thisTrialNumber=0;
               float stimVoltage =0;
+              float aSize = 0;
               float falseAlarm=0;
               boolean hitTrial = false;
               
@@ -208,7 +210,7 @@ size(800, 700); //from600
                   .setPosition(ScreenSizeW*0.7, ScreenSizeH*0.05)
                   .setSize(sizeTextBoxW/2, sizeTextBoxH)
                   .getCaptionLabel().align(ControlP5.CENTER, ControlP5.CENTER)
-                  .setVisible(true)
+                  .setVisible(false)
                   ;  
                   
                 cp5.addTextfield("Mouse_ID")
@@ -244,11 +246,22 @@ size(800, 700); //from600
                   .setFont(font)
                   ;
                   
-                  cp5.addTextfield("%size")
+                  cp5.addTextfield("%size_one")
                   .setPosition(ScreenSizeW*0.5, ScreenSizeH*0.15)
                   .setSize(sizeTextBoxW/2, sizeTextBoxH)
                   //.setFont(createFont("arial", 20))
                   .setText("100")
+                  .setFont(font2)
+                  .setAutoClear(false)
+                  .getCaptionLabel()
+                  .setFont(font)
+                  ;
+                  
+                  cp5.addTextfield("%size_two")
+                  .setPosition(ScreenSizeW*0.5, ScreenSizeH*0.25)
+                  .setSize(sizeTextBoxW/2, sizeTextBoxH)
+                  //.setFont(createFont("arial", 20))
+                  .setText("90")
                   .setFont(font2)
                   .setAutoClear(false)
                   .getCaptionLabel()
@@ -265,22 +278,22 @@ size(800, 700); //from600
                   .setFont(font)
                   ;
               
-                cp5.addTextfield("Answer_Duration")
+                cp5.addTextfield("do_opto")
                 .setPosition(ScreenSizeW*0.05, ScreenSizeH*0.15)
                 .setSize(sizeTextBoxW/3, sizeTextBoxH)
                 // .setFont(createFont("arial", 20))
-                .setText("500")
-                .setDefaultValue(500)
+                .setText("0")
+                .setDefaultValue(0)
                 .setAutoClear(false)
                 .setVisible(true)
                 ;
                 
-                cp5.addTextfield("Stim Duration")
+                cp5.addTextfield("do_alt_isi")
                 .setPosition(ScreenSizeW*0.05, ScreenSizeH*0.25)
                 .setSize(sizeTextBoxW/3, sizeTextBoxH)
                 // .setFont(createFont("arial", 20))
-                .setText("100")
-                .setDefaultValue(100)
+                .setText("1")
+                .setDefaultValue(1)
                 .setAutoClear(false)
                 .setVisible(true)
                 ;
