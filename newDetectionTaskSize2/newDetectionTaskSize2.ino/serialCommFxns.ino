@@ -7,6 +7,7 @@ void checkSerial(){
         isRunning = true;
         daqReady = true;
         if (init_pi == false){
+          
           initPiIntensities();
           init_pi = true;
         }

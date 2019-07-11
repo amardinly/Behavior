@@ -44,7 +44,7 @@ int timeOutDurationMin = 5000;
 int timeOutDurationMax = 9000;  
 int timeOutSignalTime = 1000;
 int timeOutToneTime = 1000;
-int optoWeights[3] = {3,1};
+int optoWeights[2] = {2,1};
 
 
 
@@ -139,7 +139,7 @@ void setup() {
   chooseParams();  populateTrials();
 
   thisTrialNumber = 0;//cant figure out where or how this gets reset....but this fixes it
-
+  
 }
 
 
@@ -159,7 +159,11 @@ int genISI(int mint, int maxt){
 
 
 bool setIsOpto(){
-  isOpto = optoVals[thisTrialNumber];
+  if (optoVals[thisTrialNumber]==1){
+    isOpto = true;
+  }else{
+    isOpto= false;
+  }
   if (isOpto==true){
     turnLEDOn();
   } else {
@@ -257,7 +261,6 @@ void resetTrial(){
 
 void loop() {
 
- 
 
   checkSerial();
 
@@ -295,7 +298,7 @@ void loop() {
 
         if (altISI==false){
 
-          if (nextTrialStart - (millis()) < preTrialNoLickTime && lickOccured == true) {
+          if (nextTrialStart - (millis()) < preTrialNoLickTime && lickOccured == true && millis()>gracePeriodEnd) {
 
                   nextTrialStart = nextTrialStart + random(timeOutDurationMin,timeOutDurationMax);
 

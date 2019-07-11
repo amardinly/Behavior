@@ -16,7 +16,7 @@ void initPiIntensities(){
   Serial.print("doOpto is ");
   Serial.println(doOpto);
   digitalWrite(piInitPin, HIGH);
-  delay(100);
+  delay(400);
   //first, send sizes
   sendPiNumber(grate_size1);
   delay(50);
@@ -32,17 +32,22 @@ void initPiIntensities(){
   endSendPiNumber();
   delay(20);
   for (int index = 0; index < (sizeof(conditionWeights) / sizeof(int)); index++){
-    sendPiNumber(conditions[1][index]);
-    delay(50);
+    if (conditionWeights[index]>0){
+    sendPiNumber(conditions[index][1]);
+    delay(100);
     endSendPiNumber();
     delay(20);
+    }
   }
   digitalWrite(piInitPin, LOW);
   delay(3000); //let the pi do its thing
 }
 
 void sendPiNumber(int num){
+  //Serial.print("sending pi number ");
+  //Serial.println(num); 
   for (byte i=0; i<numPins; i++) {
+    //Serial.print(state);
     byte state = bitRead(num, i);
     digitalWrite(pins[i], state);
   }

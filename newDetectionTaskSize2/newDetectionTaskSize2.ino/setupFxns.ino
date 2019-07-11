@@ -73,10 +73,10 @@ void chooseParams() {
       if (state==3) {
           autoReward = false;
           
-          int theLevels_s1[6]={0,4,16,64,180,255};
-          int theWeights_s1[6] = {1,1, 1, 1, 1, 1};
-          int theLevels_s2[6]={0,2,6,32,64,255};
-          int theWeights_s2[6] = {1,1, 1, 1, 1, 1};
+          int theLevels_s1[6]={13,51,190,204,220,250};
+          int theWeights_s1[6] = {1, 1, 1, 1, 1,1};
+          int theLevels_s2[6]={0,3,13,64,100,170};
+          int theWeights_s2[6] = {1, 1, 1, 1, 1,1};
           
           for (int index = 0; index < (sizeof(theWeights_s1) / sizeof(int)); index++){
             conditions[index][0] = grate_size1;
@@ -92,6 +92,7 @@ void chooseParams() {
                 conditions[index+add_to_index][1] = theLevels_s2[index];
                 conditionWeights[index+add_to_index] = theWeights_s2[index];
           }
+          
       }
 }
 
@@ -149,13 +150,15 @@ void populateTrials() {int output_size = 0;
       //just duplicate it for randomizing purposes I guess
       int i=0;
       for (int n=0; n < 2; n++){
-          weightedOptoOutputs[i][0] = weightedOutputs[i][0];
-          weightedOptoOutputs[i][1] = weightedOutputs[i][1];
+        for (int k = 0; k < arraySum; k++) { // for all weights + conditions
+          weightedOptoOutputs[i][0] = weightedOutputs[k][0];
+          weightedOptoOutputs[i][1] = weightedOutputs[k][1];
           weightedOptoOutputs[i][2] = 0;
           conditionIndexes[i] = i;
           i++;
+        }
       }
-  }  
+  }
   
   int k = 0;
   int arrLen = sizeof(conditionIndexes) / sizeof(int);
@@ -174,7 +177,7 @@ void populateTrials() {int output_size = 0;
       sizeVals[k] = weightedOptoOutputs[condInd][0];
       stimVals[k] = weightedOptoOutputs[condInd][1];
       optoVals[k] = weightedOptoOutputs[condInd][2];
-         
+      
       k++;
     }
   }
