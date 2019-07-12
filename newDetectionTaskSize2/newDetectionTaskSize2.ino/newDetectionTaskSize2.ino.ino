@@ -126,24 +126,17 @@ char val;  //data received from serial port
 
 // the setup function runs once when you press reset or power the board or start a serial connection
 
-void setup() {
+void setup(){
   randomSeed(analogRead(0)); //make the random generator more random
   setupPins();
   Serial.begin(9600);
-  
   if (debug == false) {
      establishContact();
-  }
-  
-
+  } 
   chooseParams();  populateTrials();
-
   thisTrialNumber = 0;//cant figure out where or how this gets reset....but this fixes it
   
 }
-
-
-
 
 int genISI(int mint, int maxt){
   // 7/9 switched back to uniform while awaiting new plan
@@ -261,6 +254,15 @@ void resetTrial(){
 
 void loop() {
 
+ Serial.println("begin cond list");
+          for (int index = 0; index<20; index++){
+            
+            Serial.print(conditions[index][0]);
+            Serial.print(",");
+            Serial.print(conditions[index][1]); Serial.print(",");
+            Serial.print(conditionWeights[index]);
+            Serial.println(";");
+          }
 
   checkSerial();
 
@@ -298,7 +300,7 @@ void loop() {
 
         if (altISI==false){
 
-          if (nextTrialStart - (millis()) < preTrialNoLickTime && lickOccured == true && millis()>gracePeriodEnd) {
+          if (nextTrialStart - (millis()) < preTrialNoLickTime && lickOccured == true) {
 
                   nextTrialStart = nextTrialStart + random(timeOutDurationMin,timeOutDurationMax);
 

@@ -28,6 +28,7 @@ void chooseParams() {
     
       // set autoreward and contrast levels based on state chosen
       if (state==1) {
+        autoReward=true;
           int theLevels_s1[1]={250};
           int theWeights_s1[1] = {1};       
           int theLevels_s2[1]={250};
@@ -77,7 +78,7 @@ void chooseParams() {
           int theWeights_s1[6] = {1, 1, 1, 1, 1,1};
           int theLevels_s2[6]={0,3,13,64,100,170};
           int theWeights_s2[6] = {1, 1, 1, 1, 1,1};
-          
+         
           for (int index = 0; index < (sizeof(theWeights_s1) / sizeof(int)); index++){
             conditions[index][0] = grate_size1;
             conditions[index][1] = theLevels_s1[index];
@@ -102,7 +103,7 @@ void populateTrials() {int output_size = 0;
     if (conditionWeights[index] != 0){
       output_size++;
     }
-  }
+   }
 
   int arraySum = 0;
   for (int index = 0; index < output_size; index++){
