@@ -19,7 +19,7 @@ int black_level = 0;
 int grate_size1 = 100;
 int grate_size2 = 600;
 
-bool altISI = true;
+bool altISI = false;
 
  
 
@@ -28,7 +28,7 @@ bool altISI = true;
 //Init Exp Defaults
 int isiMin = 3000;//as in petersen paper
 int isiMax = 9000;// 5/6 changed to 9000 //2/25 changed from 8000 as in petersen paper
-int trialNumber = 1000;  // num trials to allow
+int trialNumber = 1000;  // um trials to allow
 int trialStartTime = 2000;
 int ISIDistribution[1050];  ///pad extra to prevent errors
 int stimVals[1050];
@@ -152,6 +152,7 @@ int genISI(int mint, int maxt){
 
 
 bool setIsOpto(){
+  //7/29 changed 
   if (optoVals[thisTrialNumber]==1){
     isOpto = true;
   }else{
@@ -239,7 +240,7 @@ void resetTrial(){
   }
 
   gracePeriodEnd = millis() + timeOutSignalTime;
-  setIsOpto();
+  //7/29 changed setIsOpto();
 }
 
 
@@ -253,16 +254,6 @@ void resetTrial(){
 // the loop function runs over and over again forever
 
 void loop() {
-
- Serial.println("begin cond list");
-          for (int index = 0; index<20; index++){
-            
-            Serial.print(conditions[index][0]);
-            Serial.print(",");
-            Serial.print(conditions[index][1]); Serial.print(",");
-            Serial.print(conditionWeights[index]);
-            Serial.println(";");
-          }
 
   checkSerial();
 
@@ -366,7 +357,7 @@ void loop() {
 
       }
 
-      
+      setIsOpto(); // 7/29
 
       turnStimOn(); //stim goes on
 
@@ -447,6 +438,8 @@ void loop() {
       isResponseWindow = false;
 
       sendSerial();
+      //7/29 CHANGED
+      turnLEDOff();
 
         
 
@@ -468,7 +461,7 @@ void loop() {
 
       // give a time out for false alarm licking after the response window
 
-      if (catchFA==true && altISI == false){
+      if (catchFA==true){
 
         timeOutEnd = rewardPeriodEnd + random(timeOutDurationMin,timeOutDurationMax);
 
@@ -487,7 +480,7 @@ void loop() {
         
 
       // just in case
-
+    
       digitalWrite(piFAPin, LOW);
 
       timeOutSignalOn = false;

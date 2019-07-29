@@ -74,10 +74,13 @@ void chooseParams() {
       if (state==3) {
           autoReward = false;
           
-          int theLevels_s1[6]={13,51,190,204,220,250};
+          int theLevels_s1[6]={13,51,190,204,220,250}; // easy 
+          //int theLevels_s1[6]={10,35,51,130,204,250}; //hard for 56.2
           int theWeights_s1[6] = {1, 1, 1, 1, 1,1};
-          int theLevels_s2[6]={0,3,13,64,100,170};
-          int theWeights_s2[6] = {1, 1, 1, 1, 1,1};
+          int theLevels_s2[6]={0,3,13,64,100,170}; //easy 
+          int theWeights_s2[6] = {1, 1, 1, 1, 1,1}; //easy
+          //int theLevels_s2[7]={0,4,10,25,50,100,192}; //hard for 56.2
+          //int theWeights_s2[7] = {1, 1, 1, 1, 1,1,1};
          
           for (int index = 0; index < (sizeof(theWeights_s1) / sizeof(int)); index++){
             conditions[index][0] = grate_size1;
@@ -166,7 +169,7 @@ void populateTrials() {int output_size = 0;
 
   while (k < trialNumber) {
     for (int a = arrLen - 1; a > 0; a--){
-        int r = random(0,a);
+        int r = random(0,a+1);
         if (r != a){
           int temp = conditionIndexes[a];
          conditionIndexes[a] = conditionIndexes[r];
