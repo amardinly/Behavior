@@ -19,7 +19,7 @@ def genSinusoid(sz, A, omega, rho, cpp):
 class SampleApp(tk.Tk):
     def __init__(self, *args, **kwargs):
         tk.Tk.__init__(self, *args, **kwargs)
-        self.base_size = (480,656)
+        self.base_size = (480,800)
 	#use pickle to load LUT
         with open('/home/pi/Documents/lut.p','rb') as f:
             self.LUT = pickle.load(f)

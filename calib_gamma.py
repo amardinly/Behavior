@@ -20,7 +20,7 @@ class SampleApp(tk.Tk):
         
         
         tk.Tk.__init__(self, *args, **kwargs)
-        self.size = (480, 650)
+        self.size = (480, 800)
         self.overrideredirect(1)
         self.canvas = tk.Canvas(self, width=self.size[1], height=self.size[0])
         self.canvas.pack()
