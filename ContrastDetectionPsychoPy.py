@@ -8,9 +8,9 @@ class ContrastDetectionTask:
     
     def __init__(self):
         #variables for file id 
-        base_dir = '/home/hbounds/Desktop/'
+        base_dir = 'C:/Users/miscFrankenRig/Documents/ContrastDetectionTask/'
 
-        expInfo = {'mouse':'Mfake','date': data.getDateStr()}
+        expInfo = {'mouse':'Mfake','date': datetime.datetime.today().strftime('%Y%m%d-%H_%M_%S')}
         dlg = gui.DlgFromDict(dictionary=expInfo, title = 'Contrast Detection Task')
         if dlg.OK==False: core.quit()
 
@@ -23,40 +23,48 @@ class ContrastDetectionTask:
 
         #stimulus variables
         tf = 2 #temporal frequency
-        position = [0,0]
+        position = np.array([-15,15])
         sf = .08
-        sizes = [8, 20, 0]
+        sizes = [0,20]
         intensities = {}
         intensities[0] = [0]
-        intensities[8] = [2, 6 , 25, 50,
-               70, 86 , 100 ]
-        intensities[20] = [2, 6 , 12, 25, 50,
-               86 , 100 ]
+        intensities[20] = [2,8,16,32,64,80]
+        intensities[10] = [2,16,32,64, 100]
         
         #task variables
-        self.stim_delay = .1 #in s
+        self.stim_delay = .2 #in s
         self.stim_time = .6 #in s
         self.response_window = 1 # in s
         self.isimin = 3 # in s
         self.isimax = 8 #in s
         self.grace_time = 1 #in s
-        self.water_time = 50 #in ms
+        self.water_time = 20 #in ms
         tf=2
     
         #monitor variables
-        monitor_width = 22 #in cm
+        monitor_width = 22.5 #in cm
+        monitor_height = 13 #in cm
+
         monitor_dist = 10 #in cm
         
-        #initialize 
-        self.monitor = monitors.Monitor('testMonitor', width=monitor_width, distance=monitor_dist)
-        self.win = visual.Window(fullscr=True, monitor=self.monitor, units="deg")
-        FR = self.win.getActualFrameRate()
-        expInfo['FR'] = FR        
+        #initialize
+        self.monitor = monitors.Monitor('actualMonitor', width=monitor_width, distance=monitor_dist)
+        self.win = visual.Window(fullscr=True, monitor=self.monitor, units="pix", size=[1280, 720])
         
+        print('generated window')
+        FR = self.win.getActualFrameRate()
+        expInfo['FR'] = FR 
+        expInfo['monitor_height'] = monitor_height
+        expInfo['monitor_dist'] = monitor_dist
+        self.pix_per_deg = self.monitor.getSizePix()[1]/(np.degrees(np.arctan(monitor_height/monitor_dist)))       
+        
+        print('set up some vars')
         
         #create trial conditions
         self.size_int_response = []
-        for temp in range(10):
+        #mult = math.ceil(500/(sum([len(intensities(s)) for s in sizes])*4))
+        #print('I think mult should be ', mult)
+        for temp in range(50):
             mini_size_int_response = []
             for _ in range(4):
                 for s in sizes:
@@ -67,19 +75,28 @@ class ContrastDetectionTask:
         #and some more general variables
         self.phase_increment = tf/FR
         self.stim_on_frames = int(self.stim_time*FR)
-
+        print('conditions genned')
         self.trial_timer = core.Clock()
         self.isi_timer = core.Clock()
-        self.grating = visual.GratingStim(win=self.win, size=8, pos=position, sf=sf,units='deg')
+        self.grating = visual.GratingStim(win=self.win, size=10*self.pix_per_deg, pos=position*self.pix_per_deg,
+            sf=sf/self.pix_per_deg,units='pix', ori=180+45, mask='circle')
         
         #set up the nidaq
         self.lick_daq = ni.Task()
         self.lick_daq.di_channels.add_di_chan('Dev2/Port1/Line0')
         self.lick_daq.start()
-
+        print('daq launched')
         self.water_daq = ni.Task()
         self.water_daq.do_channels.add_do_chan('Dev2/Port1/Line2')
-        
+
+        #lines to master and SI
+        self.comm_daq = ni.Task()
+        self.comm_daq.do_channels.add_do_chan('Dev2/Port0/Line4') # to SI, stim indicator
+        self.comm_daq.do_channels.add_do_chan('Dev2/Port0/Line1') # to master, stim indicator
+        self.comm_daq.do_channels.add_do_chan('Dev2/Port0/Line5') # trigger to master
+        self.comm_daq.do_channels.add_do_chan('Dev2/Port0/Line2') # trigger to SI
+
+        print('other daqs launched')
         self.run_blocks()
         
     def run_blocks(self):
@@ -105,8 +122,10 @@ class ContrastDetectionTask:
             self.trials.saveAsWideText(self.filename + '_trials')
             self.water_daq.stop()
             self.lick_daq.stop()
+            self.comm_daq.stop()
             self.water_daq.close()
             self.lick_daq.close()
+            self.comm_daq.close()
 
     def present_grating(self):
         phase = 0
@@ -122,6 +141,9 @@ class ContrastDetectionTask:
         responded = []
         response_time = np.nan
         user_quit = False
+        self.comm_daq.start()
+        self.comm_daq.write([False, False, True, True]) #trigger
+
         
         while trial_still_running:
 
@@ -137,11 +159,18 @@ class ContrastDetectionTask:
 
             elif (current_time >= self.stim_delay and 
                   current_time <=
-                    self.stim_time+self.stim_delay-.1):
+                    self.stim_time+self.stim_delay-.2):
+
                 print(trial['intensity'], trial['size'])
                 self.grating.setContrast(trial['intensity']/100)
-                self.grating.setSize(trial['size'])
+                self.grating.setSize(trial['size']*self.pix_per_deg)
+                if trial['intensity'] > 0:
+                    self.comm_daq.write([True, True, False, False])
+                else:
+                    self.comm_daq.write([True, False, False, False])
                 self.present_grating()
+                self.comm_daq.write([False, False, False, False])
+
                 
                 
             elif current_time >= self.stim_time + self.stim_delay:
@@ -168,7 +197,7 @@ class ContrastDetectionTask:
 
             self.win.flip()
         
-        
+        self.comm_daq.stop()
         return user_quit
 
     def deliver_reward(self):
