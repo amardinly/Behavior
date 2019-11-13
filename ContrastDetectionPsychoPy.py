@@ -10,7 +10,17 @@ class ContrastDetectionTask:
         #variables for file id 
         base_dir = 'C:/Users/miscFrankenRig/Documents/ContrastDetectionTask/'
 
-        expInfo = {'mouse':'Mfake','date': datetime.datetime.today().strftime('%Y%m%d-%H_%M_%S')}
+        expInfo = {'mouse':'Mfake',
+        'date': datetime.datetime.today().strftime('%Y%m%d-%H_%M_%S'),
+        'I(mA)': '0',
+        'T(uS)': '0',
+        'flicker': True,
+        'Depth': '0',
+        'monitor_dist': 10,
+        'position_1': 0,
+        'position_2': 0,
+
+        }
         dlg = gui.DlgFromDict(dictionary=expInfo, title = 'Contrast Detection Task')
         if dlg.OK==False: core.quit()
 
@@ -23,40 +33,44 @@ class ContrastDetectionTask:
 
         #stimulus variables
         tf = 2 #temporal frequency
-        position = np.array([-15,15])
+        position = np.array([expInfo['position_1'], expInfo['position_2']])
         sf = .08
         sizes = [0,20]
         intensities = {}
-        intensities[0] = [0]
-        intensities[20] = [2,8,16,32,64,80]
+        intensities[0] = [0,0]
+        intensities[20] = [2,8,16,32,64,100]
         intensities[10] = [2,16,32,64, 100]
         
         #task variables
         self.stim_delay = .2 #in s
-        self.stim_time = .6 #in s
+        self.stim_time = .5 #in s
         self.response_window = 1 # in s
         self.isimin = 3 # in s
         self.isimax = 8 #in s
         self.grace_time = 1 #in s
-        self.water_time = 20 #in ms
+        self.water_time = 30 #in ms
         tf=2
     
         #monitor variables
         monitor_width = 22.5 #in cm
         monitor_height = 13 #in cm
 
-        monitor_dist = 10 #in cm
         
         #initialize
-        self.monitor = monitors.Monitor('actualMonitor', width=monitor_width, distance=monitor_dist)
+        self.monitor = monitors.Monitor('actualMonitor', width=monitor_width, distance=expInfo['monitor_dist'])
         self.win = visual.Window(fullscr=True, monitor=self.monitor, units="pix", size=[1280, 720])
         
         print('generated window')
         FR = self.win.getActualFrameRate()
         expInfo['FR'] = FR 
         expInfo['monitor_height'] = monitor_height
-        expInfo['monitor_dist'] = monitor_dist
-        self.pix_per_deg = self.monitor.getSizePix()[1]/(np.degrees(np.arctan(monitor_height/monitor_dist)))       
+        expInfo['water_time'] = self.water_time
+        expInfo['position'] = position
+        expInfo['stim_time'] = self.stim_time
+        expInfo['sf'] = sf
+        expInfo['tf'] = tf
+        expInfo['response_window'] = self.response_window
+        self.pix_per_deg = self.monitor.getSizePix()[1]/(np.degrees(np.arctan(monitor_height/expInfo['monitor_dist'])))       
         
         print('set up some vars')
         
@@ -80,6 +94,9 @@ class ContrastDetectionTask:
         self.isi_timer = core.Clock()
         self.grating = visual.GratingStim(win=self.win, size=10*self.pix_per_deg, pos=position*self.pix_per_deg,
             sf=sf/self.pix_per_deg,units='pix', ori=180+45, mask='circle')
+
+        #maybe temp, add some display text
+        self.text = visual.TextStim(win=self.win, text='startup', pos = [-450,-350])
         
         #set up the nidaq
         self.lick_daq = ni.Task()
@@ -212,6 +229,9 @@ class ContrastDetectionTask:
         isi = np.random.randint(self.isimin,self.isimax)
 
         self.isi_timer.reset()
+        self.text.text = 'starting ' + str(isi) + ' countdown'
+        self.text.draw()
+        self.win.flip()
         false_alarm_times = []
         while self.isi_timer.getTime() < isi:
             e=event.getKeys()
@@ -221,12 +241,16 @@ class ContrastDetectionTask:
                     return user_quit, []
             if self.isi_timer.getTime() > self.grace_time: #if we're out of grace period
                 #check for a false alarm
-                responded = self.lick_daq.read()
+                responded = self.lick_daq.read() 
                 if responded:
                     print('false alarm!')
+
                     false_alarm_times.append(round(self.trial_timer.getTime(),2))
                     isi = np.random.randint(self.isimin,self.isimax)
                     self.isi_timer.reset()
+                    self.text.text = 'false alarm! now restarting ' + str(isi) + ' countdown'
+                    self.text.draw()
+                    self.win.flip()
         return user_quit, false_alarm_times
 
 if __name__ == '__main__':
