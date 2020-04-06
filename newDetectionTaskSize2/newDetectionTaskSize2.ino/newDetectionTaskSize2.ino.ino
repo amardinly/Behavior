@@ -7,6 +7,7 @@ bool Rig = false;
 bool synch = false;
 bool visual = true;
 bool do_timeout = true;
+bool long_opto = false;
 
 //these variables are dependent on state/set by processing
 
@@ -19,14 +20,14 @@ int black_level = 0;
 int grate_size1 = 100;
 int grate_size2 = 600;
 
-bool altISI = false;
+bool altISI = true;
 
  
 
 
 
 //Init Exp Defaults
-int isiMin = 3000;//as in petersen paper
+int isiMin = 3000;//as in petersen paper orinal 3000 
 int isiMax = 9000;// 5/6 changed to 9000 //2/25 changed from 8000 as in petersen paper
 int trialNumber = 1000;  // um trials to allow
 int trialStartTime = 2000;
@@ -34,10 +35,13 @@ int ISIDistribution[1050];  ///pad extra to prevent errors
 int stimVals[1050];
 int sizeVals[1050];
 int optoVals[1050];
-int stimDelayStart = 50;  // send a trigger to the DAQ 50 ms before stimulus
+int stimDelayStart = 70;  // send a trigger to the DAQ 50 ms before stimulus
 int magOnTime = 600;  //duration of magnet on time
-int valveOpenTime = 50; //millis that the H20 valve is open
-int lickResponseWindow = 1000;//amount of time mice have to response
+int valveOpenTime = 70; //millis that the H20 valve is open
+//int valveOpenTime = 200;
+
+//int lickResponseWindow = 1000;//amount of time mice have to response
+int lickResponseWindow = 1000;
 int responseDelay = 0;  //time btween stim offset and answer period
 int preTrialNoLickTime = 2000;// no licks before trial or we trigger a false alarm
 int timeOutDurationMin = 5000;  
@@ -165,6 +169,20 @@ bool setIsOpto(){
   }
 }
 
+bool setIsLongOpto(){
+  if (optoVals[thisTrialNumber+1]==1){
+    isOpto = true;
+  }else{
+    isOpto= false;
+  }
+  if (isOpto==true){
+    turnLEDOn();
+  } else {
+    turnLEDOff();
+  }
+}
+
+
 
 
 void prepTrial(){
@@ -241,6 +259,9 @@ void resetTrial(){
 
   gracePeriodEnd = millis() + timeOutSignalTime;
   //7/29 changed setIsOpto();
+  if (long_opto==true){
+    setIsLongOpto();
+  }
 }
 
 
@@ -357,8 +378,9 @@ void loop() {
 
       }
 
-      setIsOpto(); // 7/29
-
+      if (long_opto==false){
+        setIsOpto(); // 7/29
+      }
       turnStimOn(); //stim goes on
 
       

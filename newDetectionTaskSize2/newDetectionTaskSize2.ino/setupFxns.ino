@@ -73,15 +73,95 @@ void chooseParams() {
       }
       if (state==3) {
           autoReward = false;
+
           
-          int theLevels_s1[6]={13,51,190,204,220,250}; // easy 
-          //int theLevels_s1[6]={10,35,51,130,204,250}; //hard for 56.2
-          int theWeights_s1[6] = {1, 1, 1, 1, 1,1};
+          int theLevels_s1[7]={13,51,64,190,204,220,250}; // easy
+          int theWeights_s1[7] = {1, 1, 1, 1, 1,1,1};
           int theLevels_s2[6]={0,3,13,64,100,170}; //easy 
           int theWeights_s2[6] = {1, 1, 1, 1, 1,1}; //easy
-          //int theLevels_s2[7]={0,4,10,25,50,100,192}; //hard for 56.2
-          //int theWeights_s2[7] = {1, 1, 1, 1, 1,1,1};
-         
+
+          for (int index = 0; index < (sizeof(theWeights_s1) / sizeof(int)); index++){
+            conditions[index][0] = grate_size1;
+            conditions[index][1] = theLevels_s1[index];
+            conditionWeights[index] = theWeights_s1[index];
+          }
+          
+          int add_to_index = (sizeof(theWeights_s1) / sizeof(int));
+          for (int index = 0;
+            index < (sizeof(theWeights_s2) / sizeof(int));
+            index++){
+                conditions[index+add_to_index][0] = grate_size2;
+                conditions[index+add_to_index][1] = theLevels_s2[index];
+                conditionWeights[index+add_to_index] = theWeights_s2[index];
+          }
+      }
+          if (state==4){
+           autoReward = false;
+          
+          //int theLevels_s1[7]={5,10,14,25,190,204, 250}; // Halo 77.2
+          //int theWeights_s1[7] = {1,1, 1, 1, 1, 1,1};
+          //int theLevels_s2[1]={0}; //
+          //int theWeights_s2[1] = {2}; 
+
+          
+
+          //int theLevels_s1[7]={5,10,13,18,20,190, 250}; // Halo 77.4 2B
+          //int theWeights_s1[7] = {1,1, 1, 1, 1, 1,1};
+          //int theLevels_s2[1]={0}; //
+          //int theWeights_s2[1] = {2}; //
+          
+          //int theLevels_s1[7]={5,10,13,16, 20, 190, 250}; // Halo 77.1 2C
+          //int theWeights_s1[7] = {1,1, 1, 1, 1, 1,1};
+          //int theLevels_s2[1]={ 0}; //
+          //int theWeights_s2[1] = {2}; //
+
+         //int theLevels_s1[7]={5,10,13,17,25,190, 250}; // Halo 87.3  2B
+         //int theWeights_s1[7] = {1,1, 1, 1, 1, 1,1};
+         //int theLevels_s2[1]={ 0}; //
+         //int theWeights_s2[1] = {2}; //
+
+         int theLevels_s1[7]={5,10,14,18, 20, 190, 250}; // Halo 87.1  2C
+         int theWeights_s1[7] = {1,1, 1, 1, 1, 1,1};
+         int theLevels_s2[1]={0}; //
+         int theWeights_s2[1] = {2}; //
+
+         //int theLevels_s1[7]={5,10,18, 25, 190,204, 250}; // Halo 87.2  2A
+         //int theWeights_s1[7] = {1,1, 1, 1, 1, 1,1};
+         //int theLevels_s2[1]={0}; //
+         //int theWeights_s2[1] = {2}; //
+          
+
+          //int theLevels_s1[7]={5,10,14,25,190,204, 250}; // Intensities for size 20: HB76.1
+          //int theWeights_s1[7] = {1,1, 1, 1, 1, 1,1};
+          //int theLevels_s2[1]={0}; //
+          //int theWeights_s2[1] = {2}; //
+
+          //int theLevels_s1[7]={5,10,14,25,190,204, 250}; // Intensities for size 20: HB79.2
+          //int theWeights_s1[7] = {1,1, 1, 1, 1, 1,1};
+          //int theLevels_s2[1]={0}; //
+          //int theWeights_s2[1] = {2}; //
+
+          //int theLevels_s1[7]={5,10,18,25,190,204, 250}; // Intensities for size 20: HB79.4
+          //int theWeights_s1[7] = {1,1, 1, 1, 1, 1,1};
+          //int theLevels_s2[1]={0}; //
+          //int theWeights_s2[1] = {2}; //
+          
+
+          //int theLevels_s1[9]={13,15,20,25,30,51,190,220,250}; //for 56.1
+          //int theWeights_s1[9] = {1,1,1, 1, 1, 1, 1,1,1};
+          //int theLevels_s2[9]={0,3,8,15,25,38,64,140,170}; //for 56.1
+          //int theWeights_s2[9] = {1,1,1, 1, 1, 1, 1,1,1};
+        
+          
+          
+      
+          
+          
+
+       
+          
+
+       
           for (int index = 0; index < (sizeof(theWeights_s1) / sizeof(int)); index++){
             conditions[index][0] = grate_size1;
             conditions[index][1] = theLevels_s1[index];
