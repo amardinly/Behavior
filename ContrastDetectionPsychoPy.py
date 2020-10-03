@@ -37,8 +37,9 @@ class ContrastDetectionTask:
         sf = .08
         sizes = [0,20]
         intensities = {}
-        intensities[0] = [0,0]
-        intensities[20] = [2,8,16,32,64,100]
+        intensities[0] = [0]
+        intensities[20] = [8,32,64,80,
+        100]#[8,16,32,64,100]#[2,8,16,32,64,100]
         intensities[10] = [2,16,32,64, 100]
         
         #task variables
@@ -48,7 +49,7 @@ class ContrastDetectionTask:
         self.isimin = 3 # in s
         self.isimax = 8 #in s
         self.grace_time = 1 #in s
-        self.water_time = 30 #in ms
+        self.water_time = 50 #in ms
         tf=2
     
         #monitor variables
@@ -207,7 +208,7 @@ class ContrastDetectionTask:
                 self.trials.data.add('Response', 1)
                 self.trials.data.add('RespTime', response_time)
 
-            elif current_time >= 1.7:
+            elif current_time >= self.stim_delay+self.stim_time+self.response_window:
 
                 trial_still_running = False
                 self.trials.data.add('Response', 0)
