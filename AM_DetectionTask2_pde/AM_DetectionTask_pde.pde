@@ -1,4 +1,4 @@
-import processing.serial.*; //import the Serial library //<>//
+import processing.serial.*; //import the Serial library //<>// //<>//
  Serial myPort;  //the Serial port object
  String val;
 // since we're doing serial handshaking, 
@@ -22,7 +22,7 @@ import org.gicentre.utils.io.*;
 import org.gicentre.utils.*;
 import org.gicentre.utils.text.*;
 import org.gicentre.utils.network.*;
-import processing.serial.*;    // import the Processing serial library //<>// //<>// //<>// //<>//
+import processing.serial.*;    // import the Processing serial library //<>// //<>// //<>//
 import controlP5.*;
 ControlP5 cp5;
 controlP5.Button b;
@@ -50,7 +50,7 @@ float countTrialTally=0;
 float countStim=0;
 boolean StimTrial = false;
         
-String BoxNo = "2b"; //Change box number to keep track of training rig being used
+String BoxNo = "2c"; //Change box number to keep track of training rig being used
 String currPath = "C:/BehaviorDATA/"; //D drive used on tablets
 String currFolder = currPath;
               
@@ -67,16 +67,12 @@ int mySizeVal[] = new int[num];
 int myLick[] = new int[num]; //target area
 int myRewardPeriod[] = new int[num]; //licking left
 int myReward[] = new int[num]; //licking right
+int myOptoVal[] = new int[num];
 int xPos=0; //current x position
               
       
           
-              
-              
-              
-              
-              
-              
+            
               
               
               //Alan's variables
@@ -94,6 +90,7 @@ int xPos=0; //current x position
               
               float waterPortOpen=0;
               float magnetOn=0;
+              float ledOn =0;
               float isResponseWindow=0;
               float lickOccured=0;
               float trialRewarded=0;
@@ -250,7 +247,7 @@ size(800, 700); //from600
                   .setPosition(ScreenSizeW*0.5, ScreenSizeH*0.15)
                   .setSize(sizeTextBoxW/2, sizeTextBoxH)
                   //.setFont(createFont("arial", 20))
-                  .setText("100")
+                  .setText("0")
                   .setFont(font2)
                   .setAutoClear(false)
                   .getCaptionLabel()
@@ -261,12 +258,27 @@ size(800, 700); //from600
                   .setPosition(ScreenSizeW*0.5, ScreenSizeH*0.25)
                   .setSize(sizeTextBoxW/2, sizeTextBoxH)
                   //.setFont(createFont("arial", 20))
-                  .setText("90")
+                  .setText("0")
                   .setFont(font2)
                   .setAutoClear(false)
                   .getCaptionLabel()
                   .setFont(font)
                   ;
+                  
+                  
+                  
+                  cp5.addTextfield("valve_time")
+                  .setPosition(ScreenSizeW*0.5, ScreenSizeH*0.35)
+                  .setSize(sizeTextBoxW/2, sizeTextBoxH)
+                  //.setFont(createFont("arial", 20))
+                  .setText("0")
+                  .setFont(font2)
+                  .setAutoClear(false)
+                  .getCaptionLabel()
+                  .setFont(font)
+                  ;
+                  
+                  
                   cp5.addTextfield("black_level")
                   .setPosition(ScreenSizeW*0.33, ScreenSizeH*0.15)
                   .setSize(sizeTextBoxW/2, sizeTextBoxH)
@@ -292,8 +304,8 @@ size(800, 700); //from600
                 .setPosition(ScreenSizeW*0.05, ScreenSizeH*0.25)
                 .setSize(sizeTextBoxW/3, sizeTextBoxH)
                 // .setFont(createFont("arial", 20))
-                .setText("1")
-                .setDefaultValue(1)
+                .setText("0")
+                .setDefaultValue(0)
                 .setAutoClear(false)
                 .setVisible(true)
                 ;
@@ -489,7 +501,8 @@ size(800, 700); //from600
     myStimVal[i] = 0;
     myLick[i] = 0; //target area
     myRewardPeriod[i] = 0; //target area
-    myReward[i] = 0; //target area
+    myReward[i] = 0;
+    myOptoVal[i] = 0;//target area
 
   }                     
                 
@@ -501,7 +514,7 @@ size(800, 700); //from600
                 
                 
                 
-    myPort = new Serial(this, Serial.list()[6], 9600);
+    myPort = new Serial(this, Serial.list()[8], 9600);
   myPort.bufferUntil('\n');
 }
 void draw() {

@@ -1,6 +1,6 @@
 void Submit(boolean theFlag) {
   if (makeContact==false){ 
-    String[] submitvals = new String[13];
+    String[] submitvals = new String[15];
     submitvals[0]="x";
     submitvals[1] = cp5.get(Textfield.class, "%size_one").getText();
     submitvals[2] = "z";
@@ -14,6 +14,9 @@ void Submit(boolean theFlag) {
     submitvals[10] = "o";
     submitvals[11] = cp5.get(Textfield.class, "do_alt_isi").getText();
     submitvals[12] = "i";
+    submitvals[13] = cp5.get(Textfield.class, "valve_time").getText();
+    submitvals[14] = "v";
+    
     
     String joinedvals = join(submitvals,"");
     
