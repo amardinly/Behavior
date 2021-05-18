@@ -9,10 +9,13 @@ bool visual = true;
 bool do_timeout = true;
 bool long_opto = false;
 bool pre_opto = false;
-bool random_opto = true;//how random opto works: it turns on between 100 and 2500 milliseconds before the visual stim. if a timeout happens, it is turned off, and a random opto is rerolled
+bool random_opto = false;//how random opto works: it turns on between 100 and 2500 milliseconds before the visual stim. if a timeout happens, it is turned off, and a random opto is rerolled
 
-int randomOptoMin = 100;
+int randomOptoMin = 1000;
 int randomOptoMax = 3000;
+
+//int randomOptoMin = 100;
+//int randomOptoMax = 300;
 
 
 bool enforce_delay= false;
@@ -23,6 +26,7 @@ bool enforce_delay= false;
 int state = 1;
 bool autoReward;
 bool doOpto = true;
+bool doOpto2 = true;  // Added by DANIEL
 int conditions[35][2];
 int conditionWeights[35];
 int black_level = 0;
@@ -48,8 +52,8 @@ int optoVals[1050];
 int stimDelayStart = 60;  // send a trigger to the DAQ 50 ms before stimulus
 int magOnTime = 600;  //duration of magnet on time
  //millis that the H20 valve is open
-int lickResponseWindow = 500;//amount of time mice have to response
-
+int lickResponseWindow = 0;//amount of time mice have to response
+int autoRewardDelay = 900;
 
 
 //int responseDelay = 1000;  //time btween stim offset and answer period
@@ -60,14 +64,15 @@ int timeOutDurationMin = 5000;
 int timeOutDurationMax = 9000;  
 int timeOutSignalTime = 1000;
 int timeOutToneTime = 1000;
-int optoWeights[2] = {2,1};
-
-//int optoWeights[2] = {1,1};
+int optoWeights[2] = {2,1};  // 33% intermittent
+//int optoWeights[2] = {1,2};  // 66% intermittent
+//int optoWeights[2] = {0,3}; //100% intermittent
 
 
 //Specify pins
 int lickportPin = 5;
 int LEDPin = 2;
+int LEDPin2 = 6; //Added by Daniel
 int waterPin = 9;  
 int magnetPin = 11;
 int triggerPin = 12;
@@ -136,6 +141,11 @@ int timeOutSignalEnd = 0;
 bool isOpto = false;
 bool ledOn = false; //as of 4/6 actually using this distinguisher
 
+
+bool isOpto2 = false; // Added by DANIEL
+bool ledOn2 = false;
+
+
 int optoStartTime = 0;
 bool donePulsing = false;
 char val;  //data received from serial port
@@ -193,13 +203,17 @@ bool setIsOpto(){
   //7/29 changed 
   if (optoVals[thisTrialNumber]==1){
     isOpto = true;
+    isOpto2 = true;  // Added by Daniel 
   }else{
     isOpto= false;
+    isOpto2= false; // Added by Daniel 
   }
-  if (isOpto==true){
+  if (isOpto==true & isOpto2==true){ // Added by DANIEL 
     turnLEDOn();
+    turnLED2On();
   } else {
     turnLEDOff();
+    turnLED2Off(); // Added by DANIEL 
   }
 }
 
@@ -423,9 +437,14 @@ void loop() {
 
       //begin + handle reward period
       isResponseWindow = true;
-      if ((autoReward == true)&& (delayFailed==false)){ //if autoreward, begin giving water
+      
+      
+      // For delay task comment from here to...
+      
+    if ((autoReward == true)&& (delayFailed==false)){ //if autoreward, begin giving water
         turnWaterOn();
       }
+      // Up to here
 
       while ((millis()>= rewardPeriodStart) && (millis()<rewardPeriodEnd)&& (delayFailed==false))  {
             if (isLicking()==true && autoReward == false && trialRewarded == false){
@@ -437,6 +456,10 @@ void loop() {
               }
             }
 
+
+      if ((autoReward == true)&& (delayFailed==false)&& (millis()>= rewardPeriodStart+autoRewardDelay) && (trialRewarded==false)){ //if autoreward, begin giving water
+        turnWaterOn();
+      }
           //if (Rig==true){doPulsingStimIdx();}
 
           turnWaterOffOnTime();
@@ -451,6 +474,7 @@ void loop() {
       sendSerial();
       //7/29 CHANGED
       turnLEDOff();
+      turnLED2Off(); // Added by DANIEL 
 
         
 

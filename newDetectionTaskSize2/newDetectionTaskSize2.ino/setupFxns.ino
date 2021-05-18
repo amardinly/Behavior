@@ -2,6 +2,7 @@ void setupPins() {
   pinMode(magnetPin, OUTPUT);
   pinMode(waterPin, OUTPUT);
   pinMode(LEDPin, OUTPUT);
+  pinMode(LEDPin2, OUTPUT);
 
   pinMode(lickportPin, INPUT);  // OR INTERRUPT
   analogWrite(magnetPin, 0); // make sure mag and water are closed
@@ -101,12 +102,12 @@ void chooseParams() {
     timeOutDurationMax = 9000;
     isiMin = 3000;
     isiMax = 9000;
-    lickResponseWindow = 500;
+    
 
     
    
 
-    //int theLevels_s1[6]={3,9,14,50,100,220}; // INITIAL Intensities for 126.1 SIZE 50 
+    //int theLevels_s1[6]={3,5,7,9,100,220}; //  Ai203
     //int theWeights_s1[6] = {1, 1, 1, 1, 1,1};
     //int theLevels_s2[1]={0}; //
     //int theWeights_s2[1] = {2}; //
@@ -115,16 +116,35 @@ void chooseParams() {
     //int theLevels_s1[6]={3,10,19,50,100,220}; // INITIAL Intensities for 128.1 SIZE 50 
     //int theWeights_s1[6] = {1, 1, 1, 1, 1,1};
     //int theLevels_s2[1]={0}; //
+   //int theWeights_s2[1] = {2}; //
+
+
+    int theLevels_s1[6]={3,8,14,50,90,220}; // INITIAL Intensities PVs size 50
+    int theWeights_s1[6] = {1, 1, 1, 1, 1,1};
+    int theLevels_s2[1]={0}; //
+    int theWeights_s2[1] = {2}; //
+
+
+    //int theLevels_s1[6]={6,19,32,77,128,220}; // INITIAL Intensities PVs size 25
+    //int theWeights_s1[6] = {1, 1, 1, 1, 1,1};
+    //int theLevels_s2[1]={0}; //
     //int theWeights_s2[1] = {2}; //
-
-
-    //int theLevels_s1[6]={3,8,14,50,90,220}; // INITIAL Intensities for 128.2 SIZE 50 
+    
+    
+    
+    //int theLevels_s1[6]={2,7,11,27,45,220}; // INITIAL Intensities PVs size 90
     //int theWeights_s1[6] = {1, 1, 1, 1, 1,1};
     //int theLevels_s2[1]={0}; //
     //int theWeights_s2[1] = {2}; //
 
 
-    //int theLevels_s1[6]={3,8,14,50,90,220}; // INITIAL Intensities for 131.4 AND 131.5 SIZE 50 
+    //int theLevels_s1[6]={6,10,19,77,128,220}; // EMX Mice size 25
+    //int theWeights_s1[6] = {1, 1, 1, 1, 1,1};
+    //int theLevels_s2[1]={0}; //
+    //int theWeights_s2[1] = {2}; //
+
+
+    //int theLevels_s1[6]={3,8,14,50,90,220}; //  
     //int theWeights_s1[6] = {1, 1, 1, 1, 1,1};
     //int theLevels_s2[1]={0}; //
     //int theWeights_s2[1] = {2}; //
@@ -141,7 +161,7 @@ void chooseParams() {
     
     //int theLevels_s1[6]= {3,16,25,50,100,250}; // Controls
     //int theWeights_s1[6] = {1,1, 1, 1, 1,1};// Size 1:20
-   //int theLevels_s2[1]={0}; //
+    //int theLevels_s2[1]={0}; //
     //int theWeights_s2[1] = {2}; //
 
     //int theLevels_s1[6]= {3,8,10,18,100,250}; // Controls
@@ -156,7 +176,7 @@ void chooseParams() {
 
     //int theLevels_s1[6]= {3,8,14,20,100,250}; // Controls
     //int theWeights_s1[6] = {1,1, 1, 1, 1,1};// Size 1:30
-    //int theLevels_s2[1]={0}; //
+    ///int theLevels_s2[1]={0}; //
     //int theWeights_s2[1] = {2}; //
 
 
@@ -179,10 +199,10 @@ void chooseParams() {
     
 
 
-    int theLevels_s1[6]={2,4,6,10,50,150}; // Controls SIZE 90 
-    int theWeights_s1[6] = {1, 1, 1, 1, 1,1};
-    int theLevels_s2[1]={0}; //
-    int theWeights_s2[1] = {2}; //
+    //int theLevels_s1[6]={2,4,6,10,50,150}; // Controls SIZE 90 
+    //int theWeights_s1[6] = {1, 1, 1, 1, 1,1};
+    //int theLevels_s2[1]={0}; //
+    //int theWeights_s2[1] = {2}; //
     
     
 

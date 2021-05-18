@@ -142,6 +142,11 @@ void establishContact() {
       value = 0;
     }
 
+    else if (ch=='r'){
+      lickResponseWindow = value;
+      value = 0;
+    }
+
     
     Serial.println(value);
   }

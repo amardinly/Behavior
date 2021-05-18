@@ -38,6 +38,19 @@ void turnLEDOff(){
   ledOn = false;
 }
 
+
+// Added by Daniel 
+
+void turnLED2On(){
+  digitalWrite(LEDPin2,HIGH);
+  ledOn2=true;
+}
+
+void turnLED2Off(){
+  digitalWrite(LEDPin2,LOW);
+  ledOn2 = false;
+}
+
 void turnWaterOffOnTime(){
   // close the water if its time to!
   if (millis() >= valveCloseTime && waterPortOpen == true) {
