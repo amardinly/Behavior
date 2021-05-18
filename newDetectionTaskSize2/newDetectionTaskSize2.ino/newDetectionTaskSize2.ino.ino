@@ -60,8 +60,8 @@ int timeOutDurationMin = 5000;
 int timeOutDurationMax = 9000;  
 int timeOutSignalTime = 1000;
 int timeOutToneTime = 1000;
-//int optoWeights[3] = {2,1,0}// 33% intermittent
-int optoWeights[3] = {1,1,1}// 2 LED intermittent
+//int optoWeights[3] = {2,1,0};// 33% intermittent
+int optoWeights[3] = {1,1,1};// 2 LED intermittent
 
 //int optoWeights[2] = {1,2};  // 66% intermittent
 //int optoWeights[2] = {0,3}; //100% intermittent
@@ -131,11 +131,8 @@ bool timeOutSignalOn = false;
 bool delayFailed= false;
 int timeOutSignalEnd = 0;
 
-bool isOpto = false;
+int isOpto = 0; // 5/18/21 change to int to take multiple values
 bool ledOn = false; //as of 4/6 actually using this distinguisher
-
-
-bool isOpto2 = false; // Added by DANIEL
 bool ledOn2 = false;
 
 int optoStartTime = 0;
@@ -175,50 +172,34 @@ int getRandOptoStart(){
 
 void turnRandOptoOnOnTime(){
   //checks if the time is right to turn on random opto
-  if (optoVals[thisTrialNumber+1]==1){
-    isOpto = true;
-  }else{
-    isOpto= false;
-  }
-  if (isOpto==true && millis() > optoStartTime){
-    Serial.println("time for opto");
-    turnLEDOn();
-  } else {
-    turnLEDOff();
-  }
+  isOpto = optoVals[thisTrialNumber+1];
+  
+  handleLEDOnOff();
 }
 
 bool setIsOpto(){
   //7/29 changed 
-  if (optoVals[thisTrialNumber]==1){
-    isOpto = true;
-    isOpto2 = true;  // Added by Daniel 
-  }else{
-    isOpto= false;
-    isOpto2= false; // Added by Daniel 
-  }
-  if (isOpto==true & isOpto2==true){ // Added by DANIEL 
-    turnLEDOn();
-    turnLED2On();
-  } else {
-    turnLEDOff();
-    turnLED2Off(); // Added by DANIEL 
-  }
+  isOpto = optoVals[thisTrialNumber];
+  handleLEDOnOff();
 }
 
 bool setIsLongOpto(){
-  if (optoVals[thisTrialNumber+1]==1){
-    isOpto = true;
-  }else{
-    isOpto= false;
-  }
-  if (isOpto==true){
-    turnLEDOn();
-  } else {
-    turnLEDOff();
-  }
+  isOpto = optoVals[thisTrialNumber+1];
+  handleLEDOnOff();
 }
 
+void handleLEDOnOff(){
+  if (isOpto==0){ 
+    turnLEDOff();
+    turnLED2Off(); 
+  } else if (isOpto==1) {
+    turnLEDOn();
+    turnLED2Off(); 
+  } else if (isOpto==2){
+    turnLEDOff();
+    turnLED2On(); 
+  }
+}
 
 
 

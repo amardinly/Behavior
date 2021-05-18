@@ -77,7 +77,9 @@ void sendSerial(){
   Serial.print(",");
   Serial.print(sizeVals[thisTrialNumber]);
   Serial.print(",");
-  Serial.println(ledOn);
+  Serial.print(ledOn);
+  Serial.print(",");
+  Serial.println(isOpto);
   
 }
 

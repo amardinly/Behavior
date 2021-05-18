@@ -320,9 +320,15 @@ void populateTrials() {
       i++;
     }
   }
+  
   int arraySumTwo;
+  //changes to make opto weights be variable size
+  int lenOptoW = sizeof(optoWeights) / sizeof(int);
   if (doOpto == 1) {
-    arraySumTwo = optoWeights[0] * arraySum + optoWeights[1] * arraySum;
+    arraySumTwo = 0;
+    for (int n = 0; n < lenOptoW; n++) {
+      arraySumTwo += optoWeights[n] * arraySum;
+    }
   } else {
     arraySumTwo = arraySum * 2;
   }
@@ -333,7 +339,7 @@ void populateTrials() {
   if (doOpto == 1) {
     // then we'll duplicate that whole array, and give the firs thalf non opto weights
     int wCondInd = 0;
-    for (int optoCond = 0; optoCond < 2; optoCond++) { // each opto condition
+    for (int optoCond = 0; optoCond < lenOptoW; optoCond++) { // each opto condition
       for (int k = 0; k < arraySum; k++) { // for all weights + conditions
         for (int optoW = 0; optoW < optoWeights[optoCond]; optoW++) {
           weightedOptoOutputs[wCondInd][0] = weightedOutputs[k][0];
