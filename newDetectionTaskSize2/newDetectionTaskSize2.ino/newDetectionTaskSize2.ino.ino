@@ -13,13 +13,10 @@ bool random_opto = false;//how random opto works: it turns on between 100 and 25
 
 int randomOptoMin = 1000;
 int randomOptoMax = 3000;
-
 //int randomOptoMin = 100;
 //int randomOptoMax = 300;
 
-
 bool enforce_delay= false;
-
 
 //these variables are uedependent on state/set by processing
 
@@ -39,7 +36,6 @@ int valveOpenTime = 0;
 
 
 //Init Exp Defaults
-
 int isiMin = 3000;//as in petersen paper orinal 3000 
 int isiMax = 9000;
 
@@ -64,7 +60,9 @@ int timeOutDurationMin = 5000;
 int timeOutDurationMax = 9000;  
 int timeOutSignalTime = 1000;
 int timeOutToneTime = 1000;
-int optoWeights[2] = {2,1};  // 33% intermittent
+//int optoWeights[3] = {2,1,0}// 33% intermittent
+int optoWeights[3] = {1,1,1}// 2 LED intermittent
+
 //int optoWeights[2] = {1,2};  // 66% intermittent
 //int optoWeights[2] = {0,3}; //100% intermittent
 
@@ -85,7 +83,6 @@ int tonePin = 8;
 
 
 //set the visual pins
-
 int piOnPin = 33; //tell pi to turn stim on
 int piInitPin = 34; //tell pi to turn stim off
 int piReceivePin = 35; //tell pi to receive next trial stim info
@@ -94,11 +91,7 @@ byte pins[] = {36, 37, 38, 39, 40, 41, 42, 43}; //pins for writing binary info
 int piFAPin = 44;
 
 
-
-
-
 //init vars altered during trials
-
 int thisTrialNumber = 0;
 bool stimTime = false;
 bool trialRunning = false;
@@ -145,13 +138,9 @@ bool ledOn = false; //as of 4/6 actually using this distinguisher
 bool isOpto2 = false; // Added by DANIEL
 bool ledOn2 = false;
 
-
 int optoStartTime = 0;
 bool donePulsing = false;
 char val;  //data received from serial port
-
-
-
 
 
 // the setup function runs once when you press reset or power the board or start a serial connection
@@ -244,10 +233,7 @@ void prepTrial(){
 
 
 void startTrial(){
-
       thisTrialNumber=thisTrialNumber + 1;
-
-
 
       if (Rig == true && synch == true) {
         daqReady = false;
@@ -271,7 +257,6 @@ void startTrial(){
       endSendPiNumber(); //cease trial start signals      
 
 }
-
 
 
 void resetTrial(){
@@ -361,25 +346,16 @@ void loop() {
         if (random_opto==true){
           turnRandOptoOnOnTime();
         }
-
         //talk to serial at the end of each loop of while, and check on serial too
-
         sendSerial();
-
         checkSerial();
-
       }
 
       if (isRunning==false){
-
         return; // exit loop to hold in checkSerial
-
       }
 
-      
-
       // just in case, shutoff timeout signals
-
       digitalWrite(piFAPin, LOW);  timeOutSignalOn = false;
 
 
@@ -391,9 +367,7 @@ void loop() {
       }
 
       while (millis()<=stimStartTime){ //wait till stim on
-
         sendSerial();
-
       }
 
       if (long_opto==false && pre_opto==false && random_opto==false){
@@ -434,7 +408,6 @@ void loop() {
       //if (Rig==true){doPulsingStimIdx();
  
     
-
       //begin + handle reward period
       isResponseWindow = true;
       
@@ -461,11 +434,9 @@ void loop() {
         turnWaterOn();
       }
           //if (Rig==true){doPulsingStimIdx();}
-
           turnWaterOffOnTime();
           turnTimeOutSignalOffOnTime();
           sendSerial();
-
       }
 
       //just in case, turn off water
@@ -478,15 +449,13 @@ void loop() {
 
         
 
-      //make sure we finished sending mag stim idx pulses
-
+      //make sure we finished sending mag stim idx pulse
       //if (Rig == true){ while (donePulsing==false){doPulsingStimIdx(); sendBehaviorOutcome();
        
 
-        
+    
 
       // give a time out for false alarm licking after the response window
-
       if ((catchFA==true) || (delayFailed==true)){
         timeOutEnd = rewardPeriodEnd + random(timeOutDurationMin,timeOutDurationMax);
         while (millis()<=timeOutEnd){

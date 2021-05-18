@@ -131,8 +131,6 @@ void establishContact() {
       }
       value=0;
       }
-
-    
     
     else if (ch=='x'){
       value=0;
