@@ -11,7 +11,7 @@ bool long_opto = false;
 bool pre_opto = false;
 bool random_opto = false;//how random opto works: it turns on between 100 and 2500 milliseconds before the visual stim. if a timeout happens, it is turned off, and a random opto is rerolled
 
-int randomOptoMin = 1000;
+int randomOptoMin = 300;
 int randomOptoMax = 3000;
 //int randomOptoMin = 100;
 //int randomOptoMax = 300;
@@ -52,7 +52,7 @@ int lickResponseWindow = 0;//amount of time mice have to response
 int autoRewardDelay = 900;
 
 
-//int responseDelay = 1000;  //time btween stim offset and answer period
+//int responseDelay = 500;  //time btween stim offset and answer period
 int responseDelay = 0;
 
 int preTrialNoLickTime = 2000;// no licks before trial or we trigger a false alarm
@@ -60,8 +60,8 @@ int timeOutDurationMin = 5000;
 int timeOutDurationMax = 9000;  
 int timeOutSignalTime = 1000;
 int timeOutToneTime = 1000;
-//int optoWeights[3] = {2,1,0};// 33% intermittent
-int optoWeights[3] = {1,1,1};// 2 LED intermittent
+int optoWeights[3] = {2,1,0};// 33% intermittent
+//int optoWeights[3] = {1,1,1};// 2 LED intermittent
 
 //int optoWeights[2] = {1,2};  // 66% intermittent
 //int optoWeights[2] = {0,3}; //100% intermittent
@@ -360,30 +360,29 @@ void loop() {
       
 
       while (millis() < stimEndTime) { //during stim presentation
-
         sendSerial();
         lickOccured = isLicking();
-        if ((enforce_delay==true)&& (lickOccured ==true)){
+        if ((enforce_delay==true) && (lickOccured ==true)){
           delayFailed = true;
           turnTimeOutSignalOn();
+          falseAlarm=true; //use this to indicate punished early licking for now
           break;
         }
-
+        sendSerial();
+        falseAlarm=false; 
         //if (Rig==true){doPulsingStimIdx();}
-
       }
-
-      
 
       turnStimOff(); //stim goes off
 
       while ((millis() < rewardPeriodStart) && (delayFailed==false)){ //then wait for the reward period
         sendSerial();
         lickOccured = isLicking();
-        Serial.println(delayFailed);
+        //Serial.println(delayFailed);
         if ((enforce_delay ==true) && (lickOccured==true)){
           delayFailed = true;
           turnTimeOutSignalOn();
+          break;
         }
       }
       //if (Rig==true){doPulsingStimIdx();

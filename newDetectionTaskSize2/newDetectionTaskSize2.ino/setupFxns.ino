@@ -101,33 +101,31 @@ void chooseParams() {
     timeOutDurationMin = 5000;
     timeOutDurationMax = 9000;
     isiMin = 3000;
+    
     isiMax = 9000;
     
 
     
    
 
-    //int theLevels_s1[6]={3,5,7,9,100,220}; //  Ai203
-    //int theWeights_s1[6] = {1, 1, 1, 1, 1,1};
-    //int theLevels_s2[1]={0}; //
-    //int theWeights_s2[1] = {2}; //
-
-
-    //int theLevels_s1[6]={3,10,19,50,100,220}; // INITIAL Intensities for 128.1 SIZE 50 
-    //int theWeights_s1[6] = {1, 1, 1, 1, 1,1};
-    //int theLevels_s2[1]={0}; //
-   //int theWeights_s2[1] = {2}; //
-
-
-    int theLevels_s1[6]={3,8,14,50,90,220}; // INITIAL Intensities PVs size 50
+    int theLevels_s1[6]={3,5,8,14,90,220}; //  Ai203
     int theWeights_s1[6] = {1, 1, 1, 1, 1,1};
     int theLevels_s2[1]={0}; //
     int theWeights_s2[1] = {2}; //
 
 
-    //int theLevels_s1[6]={6,19,32,77,128,220}; // INITIAL Intensities PVs size 25
+  
+
+
+    //int theLevels_s1[6]={3,8,14,50,90,220}; // INITIAL Intensities PVs size 50
     //int theWeights_s1[6] = {1, 1, 1, 1, 1,1};
     //int theLevels_s2[1]={0}; //
+    //int theWeights_s2[1] = {2}; //
+
+
+    //int theLevels_s1[6]={6,19,32,77,128,220}; // INITIAL Intensities PVs size 25
+    //int theWeights_s1[6] = {1, 1, 1, 1, 1,1};
+   // int theLevels_s2[1]={0}; //
     //int theWeights_s2[1] = {2}; //
     
     
