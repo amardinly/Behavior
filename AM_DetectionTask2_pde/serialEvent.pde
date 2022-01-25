@@ -49,6 +49,7 @@ if (canStart) {
      falseAlarm = values[8];
      
      aSize = values[9];
+     ledOn = values[10];
     //println(falseAlarm);
      updateBehaviorStats(); 
      }

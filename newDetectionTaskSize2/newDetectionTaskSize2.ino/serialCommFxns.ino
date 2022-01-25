@@ -77,7 +77,10 @@ void sendSerial(){
   Serial.print(",");
   Serial.print(sizeVals[thisTrialNumber]);
   Serial.print(",");
+  Serial.print(ledOn);
+  Serial.print(",");
   Serial.println(isOpto);
+  
 }
 
 
@@ -134,6 +137,17 @@ void establishContact() {
     else if (ch=='x'){
       value=0;
     }
+    else if (ch=='v'){
+      valveOpenTime = value;
+      value = 0;
+    }
+
+    else if (ch=='r'){
+      lickResponseWindow = value;
+      value = 0;
+    }
+
+    
     Serial.println(value);
   }
   

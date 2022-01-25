@@ -7,7 +7,8 @@ public void newFileVars() {
   String sztemp = cp5.get(Textfield.class, "%size_one").getText();
   String sztemp2 = cp5.get(Textfield.class, "%size_two").getText();
   String optotemp = cp5.get(Textfield.class, "do_opto").getText();
-  String fileName = "_"+str(year())+"_"+str(month())+"_"+str(day())+"_"+str(hour())+"_"+str(minute())+"_state_"+statetemp+"_bllevel_"+bltemp+"_size1_"+sztemp +"_size2_"+sztemp2 + "_opto_"+optotemp; 
+  String valvetime = cp5.get(Textfield.class, "valve_time").getText();
+  String fileName = "_"+str(year())+"_"+str(month())+"_"+str(day())+"_"+str(hour())+"_"+str(minute())+"_state_"+statetemp+"_bllevel_"+bltemp+"_size1_"+sztemp +"_size2_"+sztemp2 + "_valv_time_" + valvetime + "_opto_"+optotemp; 
 
    
    output = createWriter(currFolder+mouseIDtemp+fileName+"_Box"+boxIDtemp+".txt"); 

@@ -30,12 +30,25 @@ bool isDaqReady(){
 
 void turnLEDOn(){
   digitalWrite(LEDPin,HIGH);
-  //define later 
-
+  ledOn=true;
 }
 
 void turnLEDOff(){
   digitalWrite(LEDPin,LOW);
+  ledOn = false;
+}
+
+
+// Added by Daniel 
+
+void turnLED2On(){
+  digitalWrite(LEDPin2,HIGH);
+  ledOn2=true;
+}
+
+void turnLED2Off(){
+  digitalWrite(LEDPin2,LOW);
+  ledOn2 = false;
 }
 
 void turnWaterOffOnTime(){

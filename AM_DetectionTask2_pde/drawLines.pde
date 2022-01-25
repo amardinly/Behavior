@@ -13,10 +13,12 @@ public void drawLines() {
       //myLickL[i] = myLickL[i+1];
       mySizeVal[i] = mySizeVal[i+1];
       myStimVal[i]=myStimVal[i+1];
+      
      // println(mx[i]);
       myLick[i] = myLick[i+1];
       myRewardPeriod[i] = myRewardPeriod[i+1];
       myReward[i] = myReward[i+1];
+      myOptoVal[i]=myOptoVal[i+1];
     //  myMagOn[i] = magnetOn[i+1];
       //myRewardR[i] = myRewardR[i+1];
      // myNegReward[i] = myNegReward[i+1];
@@ -47,6 +49,9 @@ public void drawLines() {
     myReward[myReward.length-1] = int(ScreenSizeH*(startingHight+0.12) -(waterPortOpen*tickHeight));
     text("Water Given", ScreenSizeW*0.005, ScreenSizeH*(startingHight+0.12));
 
+
+    myOptoVal[myOptoVal.length-1] = int(ScreenSizeH*(startingHight+0.16) - (ledOn*(ledOn)*tickHeight));
+    text("Opto", ScreenSizeW*0.005, ScreenSizeH*(startingHight+0.16));
   
     
     // Draw everything
@@ -67,6 +72,8 @@ public void drawLines() {
         line(mx[i+1], myRewardPeriod[i+1], mx[i], myRewardPeriod[i]);
         stroke(40, 0, 120);     //stroke color
         line(mx[i+1], myReward[i+1], mx[i], myReward[i]);
+        stroke(0, 0, 255);     //stroke color
+        line(mx[i+1], myOptoVal[i+1], mx[i], myOptoVal[i]);
        // stroke(0, 250, 0);     //stroke color
        // line(mx[i+1], myRewardR[i+1], mx[i], myRewardR[i]);
        // stroke(40, 40, 40);     //stroke color
