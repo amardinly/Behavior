@@ -21,16 +21,16 @@ class ContrastDetectionTask:
         'monitor_dist': 10.0,
         'position_1': 0,
         'position_2': 0,
-        'preload_shuffle': False,
+        'repeats': 5,
 
         }
-        dlg = gui.DlgFromDict(dictionary=expInfo, title = 'Contrast Detection Task')
+        dlg = gui.DlgFromDict(dictionary=expInfo, title = 'NoBehContrastDisplay')
         if dlg.OK==False: core.quit()
 
 
-        self.filename = base_dir + expInfo['date']+'_' + expInfo['mouse']
+        self.filename = base_dir + expInfo['date']+'_' + expInfo['mouse']+'_nobeh_contr_'
         
-        self.exp = data.ExperimentHandler('ContrastDetectionTask','v0',
+        self.exp = data.ExperimentHandler('NoBehContrastDisplay','v0',
             dataFileName = self.filename,
             extraInfo = expInfo)
 
@@ -41,17 +41,14 @@ class ContrastDetectionTask:
         sizes = [0,30]
         intensities = {}
         intensities[0] = [0]
-        intensities[30] =  [2,4,8,32]#[4,8,16,32,100]#[8,16,64,80,90,100]#[7,16,32,64,90,100]#[5, 8, 16, 64, 100]#[4,8,16,64,90,100]#[2,8,16,32,64,100]
+        intensities[30] =  [4,6,32,64]
+        #intensities[30] =  [4,8,100]#[8,16,64,80,90,100]#[7,16,32,64,90,100]#[5, 8, 16, 64, 100]#[4,8,16,64,90,100]#[2,8,16,32,64,100]
         #intensities[10] = [2,16,32,64, 100]
         
         #task variables
         self.stim_delay = .2 #in s
         self.stim_time = .5 #in s
-        self.response_window = 1 # in s
-        self.isimin = 3 # in s
-        self.isimax = 9 #in s
-        self.grace_time = 1 #in s
-        self.water_time = 125#5/3 100 #in ms
+        self.isi_length = 3.5
         tf=2
     
         #monitor variables
@@ -67,12 +64,11 @@ class ContrastDetectionTask:
         FR = self.win.getActualFrameRate()
         expInfo['FR'] = FR 
         expInfo['monitor_height'] = monitor_height
-        expInfo['water_time'] = self.water_time
         expInfo['position'] = position
         expInfo['stim_time'] = self.stim_time
         expInfo['sf'] = sf
         expInfo['tf'] = tf
-        expInfo['response_window'] = self.response_window
+        expInfo['isi_length'] = self.isi_length
         self.pix_per_deg = self.monitor.getSizePix()[1]/(np.degrees(np.arctan(monitor_height/expInfo['monitor_dist'])))       
         
         print('set up some vars')
@@ -81,24 +77,12 @@ class ContrastDetectionTask:
         self.size_int_response = []
         #mult = math.ceil(500/(sum([len(intensities(s)) for s in sizes])*4))
         #print('I think mult should be ', mult)
-        if not expInfo['preload_shuffle']:
-            for temp in range(50):
-                mini_size_int_response = []
-                for _ in range(3):
-                    for s in sizes:
-                        for ins in intensities[s]:
-                            mini_size_int_response.append({'size':s,'intensity':ins,'corr_response':ins>0})
-                random.shuffle(mini_size_int_response)
-                
-                self.size_int_response += mini_size_int_response
-            #TEMP HACK FOR EVEN HOLO STIM
-            pickle.dump( self.size_int_response, open("M:/Hayley/size_int_resp.p", "wb" ) )
-            pd.DataFrame(self.size_int_response).to_csv('M:/Hayley/size_int_resp.csv')
-            pickle.dump( self.size_int_response, open( base_dir+"size_int_resp.p", "wb" ) )
-            pd.DataFrame(self.size_int_response).to_csv(base_dir+'size_int_resp.csv')
-        else:
-            #TEMP HACK FOR EVEN HOLO STIM
-            self.size_int_response = pickle.load( open( base_dir+"size_int_resp.p", "rb" ) )
+        for _ in range(expInfo['repeats']):
+            for s in sizes:
+                for ins in intensities[s]:
+                    self.size_int_response.append({'size':s,'intensity':ins,'corr_response':ins>0})
+        random.shuffle(self.size_int_response)
+            
 
         #and some more general variables
         self.phase_increment = tf/FR
@@ -112,14 +96,6 @@ class ContrastDetectionTask:
         #maybe temp, add some display text
         self.text = visual.TextStim(win=self.win, text='startup', pos = [-550,-450])
         self.intertrial_isi_count=0
-        
-        #set up the nidaq
-        self.lick_daq = ni.Task()
-        self.lick_daq.di_channels.add_di_chan('Dev2/Port1/Line0')
-        self.lick_daq.start()
-        print('daq launched')
-        self.water_daq = ni.Task()
-        self.water_daq.do_channels.add_do_chan('Dev2/Port1/Line2')
 
         #lines to master and SI
         self.comm_daq = ni.Task()
@@ -133,32 +109,25 @@ class ContrastDetectionTask:
         
     def run_blocks(self):
         user_quit = False 
-        while not user_quit:
-            print('makin trials')
-            #do in blocks of randomized trials
+        
+        print('makin trials')
+        #do in blocks of randomized trials
 
-            self.trials = data.TrialHandler(self.size_int_response, 1, method='sequential')
-            self.trials.data.addDataType('Response')
-            self.exp.addLoop(self.trials)
-            for trial in self.trials:
-                if user_quit:
-                    break
+        self.trials = data.TrialHandler(self.size_int_response, 1, method='sequential')
+        self.exp.addLoop(self.trials)
+        for trial in self.trials:
+            if user_quit:
+                break
+            user_quit = self.run_trial(trial)
+            if not user_quit:
+                user_quit = self.run_isi()
+                #self.trials.data.add('OtherLickTimes', other_licking_times)
+            self.exp.nextEntry()
 
-                user_quit = self.run_trial(trial)
-                if not user_quit:
-                    user_quit, false_alarm_times = self.run_isi()
-                    self.trials.data.add('FATimes',false_alarm_times)
-                    #self.trials.data.add('OtherLickTimes', other_licking_times)
-                self.exp.nextEntry()
-
-            self.exp.saveAsWideText(self.filename)
-            self.trials.saveAsWideText(self.filename + '_trials')
-            self.water_daq.stop()
-            self.lick_daq.stop()
-            self.comm_daq.stop()
-            self.water_daq.close()
-            self.lick_daq.close()
-            self.comm_daq.close()
+        self.exp.saveAsWideText(self.filename)
+        self.trials.saveAsWideText(self.filename + '_contrs')
+        self.comm_daq.stop()
+        self.comm_daq.close()
 
     def present_grating(self):
         phase = 0
@@ -176,14 +145,12 @@ class ContrastDetectionTask:
         user_quit = False
         self.comm_daq.start()
         self.comm_daq.write([False, False, True, True]) #trigger
-
         
         while trial_still_running:
 
             e=event.getKeys()
             if len(e)>0:
                 if e[0]=='q':
-
                     return True
             current_time = self.trial_timer.getTime()
             
@@ -194,7 +161,6 @@ class ContrastDetectionTask:
                   current_time <=
                     self.stim_time+self.stim_delay-.2):
 
-                print(trial['intensity'], trial['size'])
                 self.grating.setContrast(trial['intensity']/100)
                 self.grating.setSize(trial['size']*self.pix_per_deg)
                 if trial['intensity'] > 0:
@@ -203,78 +169,34 @@ class ContrastDetectionTask:
                     self.comm_daq.write([True, False, False, False])
                 self.present_grating()
                 self.comm_daq.write([False, False, False, False])
-
-                
                 
             elif current_time >= self.stim_time + self.stim_delay:
                 self.grating.setContrast(0)
                 self.grating.draw()
-
-                responded = self.lick_daq.read()
-
-
-            if responded:
-                if trial['corr_response']:
-                    self.deliver_reward()
-                
-                response_time = current_time
-                print(response_time)
                 trial_still_running = False
-                self.trials.data.add('Response', 1)
-                self.trials.data.add('RespTime', response_time)
-
-            elif current_time >= self.stim_delay+self.stim_time+self.response_window:
-
-                trial_still_running = False
-                self.trials.data.add('Response', 0)
 
             self.win.flip()
         
         self.comm_daq.stop()
         return user_quit
 
-    def deliver_reward(self):
-        self.water_daq.start()
-        self.water_daq.write(True)
-        core.wait(self.water_time/1000)
-        self.water_daq.write(False)
-        self.water_daq.stop()
-
     def run_isi(self):
+        print('enter isi')
         user_quit = False
-        isi = np.random.randint(self.isimin,self.isimax)
+        isi = self.isi_length
 
         self.isi_timer.reset()
         #self.text.text = 'starting ' + str(isi) + ' countdown'
         #self.text.draw()
         self.win.flip()
-        false_alarm_times = []
-        other_licking_times = []
         while self.isi_timer.getTime() < isi:
             e=event.getKeys()
             if len(e)>0:
                 if e[0]=='q':
                     user_quit=True
-                    return user_quit, []
-            if self.isi_timer.getTime() > self.grace_time: #if we're out of grace period
-                #check for a false alarm
-                responded = self.lick_daq.read() 
-                if responded:
-                    print('false alarm!')
-
-                    false_alarm_times.append(round(self.trial_timer.getTime(),2))
-                    isi = np.random.randint(self.isimin,self.isimax)
-                    self.isi_timer.reset()
-                    self.intertrial_isi_count += 1
-                    #self.text.text = 'FA! restarting ' + str(isi) + ' countdown. total IT FA: ' + str(self.intertrial_isi_count)
-                    #self.text.draw()
-                    #self.win.flip()
-            #else:
-            #    responded = self.lick_daq.read()
-            #    if responded:
-            #        other_licking_times.append(round(self.trial_timer.getTime(),2))
-        print('finishing run isi')
-        return user_quit, false_alarm_times    
+                    return user_quit
+        print('exit isi')
+        return user_quit
 
 if __name__ == '__main__':
     ContrastDetectionTask()
