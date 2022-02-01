@@ -4,48 +4,37 @@ import datetime
 import random
 import nidaqmx as ni
 from nidaqmx import stream_writers
+from alphaConvolve import alpha_convolve
+import pandas as pd
 
 class ContrastDetectionTask:
     
     def __init__(self):
         #variables for file id 
-        base_dir = 'C:/Users/MINI PC/Documents/ContrastDetectionTask/'
+        base_dir = 'C:/Users/inctel/Documents/ContrastDetectionTask/'
 
         expInfo = {'mouse':'Mfake',
         'date': datetime.datetime.today().strftime('%Y%m%d-%H_%M_%S'),
-        'I(mA)': '0',
-        'T(uS)': '0',
-        'flicker': True,
-        'Depth': '0',
-        'monitor_dist': 10,
-        'position_1': 0,
-        'position_2': 0,
-        'response_window': 1.0,
+        'response_window': .5,
+        'red_gain': 1.26,
+        'blue_gain': 1.36,
+        'red_volts':1.3,
+        'blue_volts':1.4,
 
         }
         dlg = gui.DlgFromDict(dictionary=expInfo, title = 'Contrast Detection Task')
         if dlg.OK==False: core.quit()
 
-
-        self.filename = base_dir + expInfo['date']+'_' + expInfo['mouse']
         
-        self.exp = data.ExperimentHandler('ContrastDetectionTask','v0',
-            dataFileName = self.filename,
-            extraInfo = expInfo)
-
         #stimulus variables
         tf = 2 #temporal frequency
-        position = np.array([expInfo['position_1'], expInfo['position_2']])
         sf = .08
         sizes = [0,20]
         intensities = {}
         intensities[0] = [0,0]
-        intensities[20] = [2,8,16,32,64,100]
+        intensities[20] = [1,2,3,5,20,100]
         led_conds = ['none','square','noise']
-        self.led_cond_function_key= {'none': self.gen_no_pulse,
-        'square': self.gen_square_pulse,
-        'noise': self.temp_gen_sine_stims
-        }
+        
         
         #task variables
         self.stim_delay = .2 #in s
@@ -55,30 +44,47 @@ class ContrastDetectionTask:
         self.isimax = 8 #in s
         self.grace_time = 1 #in s
         self.water_time = 100 #in ms
-        tf=2
     
         #monitor variables
-        monitor_width = 22.5 #in cm
-        monitor_height = 13 #in cm
+        monitor_width = 19.6 #in cm
+        monitor_height = 9.5 #in cm
 
+        #led variables
         
+        expInfo['alphaRise'] = .001
+        expInfo['alphaDecay'] = .005
+        expInfo['tEPSG'] = .01
+        expInfo['firingRate'] = 200 
+        self.led_cond_function_key= {
+            'none': self.gen_no_pulse,
+            'square': self.gen_square_pulse,
+            'noise': self.gen_synaptic_noise_stims
+        }
+
+        print('pre window generation')
         #initialize
-        self.monitor = monitors.Monitor('testMonitor', width=monitor_width, distance=expInfo['monitor_dist'])
-        self.win = visual.Window(fullscr=True, monitor=self.monitor, units="pix", size=[1280, 720])
+        expInfo['monitor_dist']=10.47
+        self.monitor = monitors.Monitor('BoxMonitor1', width=monitor_width,
+         distance=expInfo['monitor_dist'])
+        self.win = visual.Window(fullscr=True, monitor=self.monitor, 
+            units="pix")
         
         print('generated window')
         FR = self.win.getActualFrameRate()
         expInfo['FR'] = FR 
         expInfo['monitor_height'] = monitor_height
         expInfo['water_time'] = self.water_time
-        expInfo['position'] = position
+        expInfo['position'] = np.array([0,0])
         expInfo['stim_time'] = self.stim_time
-        expInfo['sf'] = sf
-        expInfo['tf'] = tf
+        
+
+        expInfo['sf'] = sf #spatial frequency of grating
+        expInfo['tf'] = tf #temporal frequency of greating
         expInfo['response_window'] = self.response_window
-        expInfo['fs'] = 4000
+        expInfo['fs'] = 5000
         self.reverse_lick = True #if the lick is represented by low volts
-        self.pix_per_deg = self.monitor.getSizePix()[1]/(np.degrees(np.arctan(monitor_height/expInfo['monitor_dist'])))       
+        self.pix_per_deg = (self.monitor.getSizePix()[1]/
+            (np.degrees(np.arctan(monitor_height/expInfo['monitor_dist']))))      
         
         print('set up some vars')
         
@@ -88,7 +94,7 @@ class ContrastDetectionTask:
         #print('I think mult should be ', mult)
         for temp in range(50):
             mini_size_int_response = []
-            for _ in range(2): #how many blocks to shuffle in
+            for _ in range(1): #how many blocks to shuffle in
                 for s in sizes:
                     for ins in intensities[s]:
                         for led_cond in led_conds:
@@ -104,12 +110,21 @@ class ContrastDetectionTask:
         print('conditions genned')
         self.trial_timer = core.Clock()
         self.isi_timer = core.Clock()
-        self.grating = visual.GratingStim(win=self.win, size=10*self.pix_per_deg, pos=position*self.pix_per_deg,
+        self.grating = visual.GratingStim(win=self.win, size=10*self.pix_per_deg, 
+                pos=expInfo['position']*self.pix_per_deg,
             sf=sf/self.pix_per_deg,units='pix', ori=180+45, mask='circle')
 
         #maybe temp, add some display text
-        self.text = visual.TextStim(win=self.win, text='startup', pos = [-450,-350])
+        self.text = visual.TextStim(win=self.win, text='startup', pos = [-250,-150],
+            height=10,opacity=.35)
         
+        #final setup
+        self.filename = base_dir + expInfo['date']+'_' + expInfo['mouse']
+        
+        self.exp = data.ExperimentHandler('ContrastDetectionTask','v0',
+            dataFileName = self.filename,
+            extraInfo = expInfo)
+
         #set up the nidaq
         self.lick_daq = ni.Task()
         self.lick_daq.di_channels.add_di_chan('Dev1/Port1/Line0')
@@ -124,7 +139,7 @@ class ContrastDetectionTask:
 
         self.led_daq.timing.cfg_samp_clk_timing(rate=expInfo['fs'],
             sample_mode= ni.constants.AcquisitionType.FINITE, 
-            samps_per_chan= int(expInfo['fs']*(self.stim_time+self.response_window)))
+            samps_per_chan= int(np.floor(expInfo['fs']*(self.stim_time+self.response_window))))
         self.led_writer = stream_writers.AnalogMultiChannelWriter(self.led_daq.out_stream,
             auto_start=False)
         print('other daqs launched')
@@ -141,10 +156,14 @@ class ContrastDetectionTask:
             self.trials.data.addDataType('Response')
             self.exp.addLoop(self.trials)
             for trial in self.trials:
+                
                 if user_quit:
                     break
 
                 user_quit = self.run_trial(trial)
+                self.text.text = 'trial number' + str(self.trials.thisTrialN)
+                self.text.draw()
+                self.win.flip()
                 if not user_quit:
                     user_quit, false_alarm_times = self.run_isi()
                     self.trials.data.add('FATimes',false_alarm_times)
@@ -167,11 +186,12 @@ class ContrastDetectionTask:
             phase += self.phase_increment
             self.grating.setPhase(phase)
             self.grating.draw()
+            self.text.draw()
             self.win.flip()
 
     def temp_gen_sine_stims(self):
         t=self.stim_time+self.response_window
-        samples = np.linspace(0, t, int(self.fs*t), endpoint=False)
+        samples = np.linspace(0, t, int(np.floor(self.fs*t)), endpoint=False)
         f=6 #fundamental frequency
         sine= np.sin(2 * np.pi * f * samples)
         f=2 #fundamental frequency
@@ -181,14 +201,29 @@ class ContrastDetectionTask:
         arr[:,-100:]=0.0
         return arr
 
+    def gen_synaptic_noise_stims(self):
+        t=self.stim_time+self.response_window
+        expInfo = self.exp.extraInfo
+        red_noise = alpha_convolve(expInfo['red_gain'],
+            expInfo['alphaRise'],expInfo['alphaDecay'],t,expInfo['tEPSG'],
+            expInfo['fs'],expInfo['firingRate'])
+        blue_noise = alpha_convolve(expInfo['blue_gain'],
+            expInfo['alphaRise'],expInfo['alphaDecay'],t,expInfo['tEPSG'],
+            expInfo['fs'],expInfo['firingRate'])
+
+        arr = np.vstack([blue_noise, red_noise])
+        arr[:,-100:]=0.0
+        return arr
+
+
     def gen_square_pulse(self):
         #TODO: don't regen
-        length = int(self.fs*(self.stim_time+self.response_window))
-        sq1 = np.ones(length)*2
-        sq2 = np.ones(length)*5
+        length = int(np.floor(self.fs*(self.stim_time+self.response_window)))
+        sq1 = np.ones(length)*self.exp.extraInfo['blue_volts']
+        sq2 = np.ones(length)*self.exp.extraInfo['red_volts']
         arr=np.vstack([sq1,sq2])
         arr[:,-100:]=0.0
-        print('sq pulse # of zeros',sum(sq1==0),sum(sq2==0))
+        print('sq pulse vals',np.unique(arr))
         return arr
 
     def gen_no_pulse(self):
@@ -239,7 +274,6 @@ class ContrastDetectionTask:
                 self.grating.setContrast(trial['intensity']/100)
                 self.grating.setSize(trial['size']*self.pix_per_deg)
                 self.present_grating()
-                print("HAYLEYS WARNING: YOU NEED TO IMPLEMENT DURING STIM LICK RECORDS FOR THIS TASK")
                 
                 
             elif current_time >= self.stim_time + self.stim_delay:
@@ -264,6 +298,7 @@ class ContrastDetectionTask:
                 trial_still_running = False
                 self.trials.data.add('Response', 0)
 
+            self.text.draw()
             self.win.flip()
         
         self.led_daq.wait_until_done()
@@ -282,9 +317,9 @@ class ContrastDetectionTask:
         isi = np.random.randint(self.isimin,self.isimax)
 
         self.isi_timer.reset()
-        self.text.text = 'starting ' + str(isi) + ' countdown'
-        self.text.draw()
-        self.win.flip()
+        #self.text.text = 'starting ' + str(isi) + ' countdown'
+        #self.text.draw()
+        #self.win.flip()
         false_alarm_times = []
         while self.isi_timer.getTime() < isi:
             e=event.getKeys()
@@ -301,9 +336,9 @@ class ContrastDetectionTask:
                     false_alarm_times.append(round(self.trial_timer.getTime(),2))
                     isi = np.random.randint(self.isimin,self.isimax)
                     self.isi_timer.reset()
-                    self.text.text = 'false alarm! now restarting ' + str(isi) + ' countdown'
-                    self.text.draw()
-                    self.win.flip()
+                    #self.text.text = 'false alarm! now restarting ' + str(isi) + ' countdown'
+                    #self.text.draw()
+                    #self.win.flip()
         return user_quit, false_alarm_times
 
 if __name__ == '__main__':
