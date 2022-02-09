@@ -14,26 +14,23 @@ class ContrastDetectionTask:
 
         expInfo = {'mouse':'Mfake',
         'date': datetime.datetime.today().strftime('%Y%m%d-%H_%M_%S'),
-        'I(mA)': '0',
-        'T(uS)': '0',
+        
         'flicker': True,
         'Depth': '0',
         'monitor_dist': 10.0,
         'position_1': 0,
         'position_2': 0,
-        'preload_shuffle': False,
-
+        'is_holo': False,
         }
+
         dlg = gui.DlgFromDict(dictionary=expInfo, title = 'Contrast Detection Task')
         if dlg.OK==False: core.quit()
 
 
+        expInfo['I(mA)']= '0'
+        expInfo['T(uS)'] = '0'
         self.filename = base_dir + expInfo['date']+'_' + expInfo['mouse']
         
-        self.exp = data.ExperimentHandler('ContrastDetectionTask','v0',
-            dataFileName = self.filename,
-            extraInfo = expInfo)
-
         #stimulus variables
         tf = 2 #temporal frequency
         position = np.array([expInfo['position_1'], expInfo['position_2']])
@@ -41,8 +38,12 @@ class ContrastDetectionTask:
         sizes = [0,30]
         intensities = {}
         intensities[0] = [0]
-        intensities[30] =  [2,4,8,32]#[4,8,16,32,100]#[8,16,64,80,90,100]#[7,16,32,64,90,100]#[5, 8, 16, 64, 100]#[4,8,16,64,90,100]#[2,8,16,32,64,100]
+        intensities[30] = [8,16,32,100]#[2,4,8,32]#[2,4,8,32]#[4,8,16,32,100]#[8,16,64,80,90,100]
         #intensities[10] = [2,16,32,64, 100]
+        holo_weights = [3,0]
+        if expInfo['is_holo']:
+            holo_weights = [2,1]
+
         
         #task variables
         self.stim_delay = .2 #in s
@@ -81,24 +82,21 @@ class ContrastDetectionTask:
         self.size_int_response = []
         #mult = math.ceil(500/(sum([len(intensities(s)) for s in sizes])*4))
         #print('I think mult should be ', mult)
-        if not expInfo['preload_shuffle']:
-            for temp in range(50):
-                mini_size_int_response = []
-                for _ in range(3):
-                    for s in sizes:
-                        for ins in intensities[s]:
-                            mini_size_int_response.append({'size':s,'intensity':ins,'corr_response':ins>0})
-                random.shuffle(mini_size_int_response)
-                
-                self.size_int_response += mini_size_int_response
-            #TEMP HACK FOR EVEN HOLO STIM
-            pickle.dump( self.size_int_response, open("M:/Hayley/size_int_resp.p", "wb" ) )
-            pd.DataFrame(self.size_int_response).to_csv('M:/Hayley/size_int_resp.csv')
-            pickle.dump( self.size_int_response, open( base_dir+"size_int_resp.p", "wb" ) )
-            pd.DataFrame(self.size_int_response).to_csv(base_dir+'size_int_resp.csv')
-        else:
-            #TEMP HACK FOR EVEN HOLO STIM
-            self.size_int_response = pickle.load( open( base_dir+"size_int_resp.p", "rb" ) )
+        for temp in range(50):
+            mini_size_int_response = []
+            for _ in range(holo_weights[0]):
+                for s in sizes:
+                    for ins in intensities[s]:
+                        mini_size_int_response.append({'size':s,'intensity':ins,'corr_response':ins>0, 'holo': 0})
+            for _ in range(holo_weights[1]):
+                for s in sizes:
+                    for ins in intensities[s]:
+                        mini_size_int_response.append({'size':s,'intensity':ins,'corr_response':ins>0, 'holo': 1})
+            random.shuffle(mini_size_int_response)
+            
+            self.size_int_response += mini_size_int_response
+           
+        pd.DataFrame(self.size_int_response).to_csv('M:/Hayley/size_int_resp.csv')
 
         #and some more general variables
         self.phase_increment = tf/FR
@@ -109,8 +107,7 @@ class ContrastDetectionTask:
         self.grating = visual.GratingStim(win=self.win, size=10*self.pix_per_deg, pos=position*self.pix_per_deg,
             sf=sf/self.pix_per_deg,units='pix', ori=180+45, mask='circle')
 
-        #maybe temp, add some display text
-        self.text = visual.TextStim(win=self.win, text='startup', pos = [-550,-450])
+       
         self.intertrial_isi_count=0
         
         #set up the nidaq
@@ -129,6 +126,14 @@ class ContrastDetectionTask:
         self.comm_daq.do_channels.add_do_chan('Dev2/Port0/Line2') # trigger to SI
 
         print('other daqs launched')
+         #maybe temp, add some display text
+        self.text = visual.TextStim(win=self.win, text='ready to go, waiting for keypress', pos = [0,0])
+        self.text.draw()
+        self.win.flip()
+        event.waitKeys()
+        self.exp = data.ExperimentHandler('ContrastDetectionTask','v0',
+            dataFileName = self.filename,
+            extraInfo = expInfo)
         self.run_blocks()
         
     def run_blocks(self):
