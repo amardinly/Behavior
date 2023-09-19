@@ -1,5 +1,7 @@
 from psychopy import visual, core,monitors,data, event,gui# import some libraries from PsychoPy
 import numpy as np
+from nidaqmx import stream_writers
+
 import datetime
 import random
 import pickle
@@ -14,27 +16,24 @@ class ContrastDetectionTask:
 
         expInfo = {'mouse':'Mfake',
         'date': datetime.datetime.today().strftime('%Y%m%d-%H_%M_%S'),
+        'flicker': True,
         'Depth': '0',
-        'monitor_dist': 8,
+        'monitor_dist': 7,
         'position_1': 0,
         'position_2': 0,
-        'n_holo':3,
-        'is_holo': False,
-        #'is_holotrain': False #marshel style contrast ramp
+        'is_opto': True,
         }
 
         dlg = gui.DlgFromDict(dictionary=expInfo, title = 'Contrast Detection Task')
-        expInfo['flicker']=True
-        expInfo['is_holotrain']=False
-        expInfo['rand_reward'] = False
-        expInfo['reward_holo'] = False #added these distinctions 8.30.23
         if dlg.OK==False: core.quit()
 
 
         self.alt_stim=False
+        self.rand_reward=True
         
         expInfo['I(mA)']= '0'
         expInfo['T(uS)'] = '0'
+        expInfo['random_opto']=True
         self.filename = base_dir + expInfo['date']+'_' + expInfo['mouse']
         
         #stimulus variables
@@ -44,34 +43,25 @@ class ContrastDetectionTask:
         sizes = [0,20]
         intensities = {}
         intensities[0] = [0,0]
-        #intensities[20] = [8,16,100,100,100]
-        intensities[20] = [8,16,32,100]#[4,8,16,100]#[10,16,64,100]#8,16,64,100]#[12,16,64,100]#[10,16,64,100]#[10,16,64,100]#[16,32,64,100,100]#[8,16,32,64,100,100]
-        #intensities[25] = [20, 32,100,100]
+        intensities[20] = [10,16,64,100]#[8,32,64,100]#[8,16,32,100]#[4,8,32,100]#[8,16,32,100]#[2,4,8,32]#[2,4,8,32]#[4,8,16,32,100]#[8,16,64,80,90,100]
         expInfo['static']=True
         expInfo['noise'] = False
         self.noise = expInfo['noise']
         #intensities[10] = [2,16,32,64, 100]
-        holo_weights = [2,0]
-        if expInfo['is_holo']:
-            holo_weights = [1]*expInfo['n_holo']
-            #holo_weights= [2,1]
-            #if expInfo['is_holotrain']:
-            #        holo_weights=[1,1]
-
+        opto_weights = [2,1]
 
         
         #task variables
+        self.random_opto = expInfo['random_opto']
         self.stim_delay = .2 #in s
         self.stim_time = .5 #in s
-        self.response_window = 1#1 # in s
-        self.isirange = [3,8] # in s 2/23/22 moved to 8
-        self.timeout_range= [5,9] #currently only used for catch timeout
+        self.response_window = 1 # in sq
+        self.isimin = 3.8 # in s
+        self.isimax = 8 #in s. 2/23/22 moved to 8
         self.grace_time = 1 #in s
-        self.water_time = 125 #5/14/22 changed from 125 #5/3 100 #in ms
+        self.water_time = 110 #5/14/22 changed from 125 #5/3 100 #in ms
+        self.rand_opto_range = [.2,1]
         tf=2
-
-        assert self.response_window<2
-        assert self.stim_time<2
     
         #monitor variables
         monitor_width = 19.7#22.5 #in cm
@@ -80,8 +70,6 @@ class ContrastDetectionTask:
         
         #initialize
         self.monitor = monitors.Monitor('iPadRetinaApril21', width=monitor_width, distance=expInfo['monitor_dist'])
-       
-
         self.win = visual.Window(fullscr=True, monitor=self.monitor, units="pix", size=[1600, 1200])
         
         print('generated window')
@@ -94,10 +82,28 @@ class ContrastDetectionTask:
         expInfo['sf'] = sf
         expInfo['tf'] = tf
         expInfo['response_window'] = self.response_window
-        expInfo['restrict_holo'] = False
-
+        expInfo['rand_opto_range'] = self.rand_opto_range
+        expInfo['stim_delay']=self.stim_delay
+        expInfo['fs']=5000
         self.pix_per_deg = self.monitor.getSizePix()[1]/(np.degrees(np.arctan(monitor_height/expInfo['monitor_dist'])))       
         
+
+
+        self.opto_length_s = (expInfo['stim_time']+ expInfo['response_window'] +
+            expInfo['stim_delay'])
+        print('opto len s',self.opto_length_s)
+        if self.random_opto:
+            self.opto_length_s = (expInfo['stim_time']+ expInfo['response_window'] +
+            expInfo['stim_delay']+self.rand_opto_range[1])
+            
+            print(self.opto_length_s,self.rand_opto_range)
+            assert self.isimin > self.opto_length_s+self.rand_opto_range[1]
+        self.opto_length = int(np.floor(self.opto_length_s * expInfo['fs']))
+
+
+        self.led_cond_function_key= [self.gen_no_pulse, self.gen_pwm_pulse]
+
+
         print('set up some vars')
         
         #create trial conditions
@@ -106,33 +112,17 @@ class ContrastDetectionTask:
         #print('I think mult should be ', mult)
         for temp in range(100):
             mini_size_int_response = []
-            for iholo in range(len(holo_weights)):
-                for _ in range(holo_weights[iholo]):
+            for iholo in range(len(opto_weights)):
+                for _ in range(opto_weights[iholo]):
                     for s in sizes:
                         for ins in intensities[s]:
-                            if expInfo['is_holotrain']:
-                                if iholo>0 and ins==100:
-                                    2+2
-                                else:
-                                    mini_size_int_response.append({'size':s,'intensity':ins,'corr_response':((ins>0) or (iholo>0)), 'holo': iholo})
-                            elif expInfo['rand_reward']:
-                                mini_size_int_response.append({'size':s,'intensity':ins,'corr_response':((ins>0) or (np.random.binomial(1,.25)>0)), 'holo': iholo})    
-                            elif expInfo['reward_holo']:
-                                mini_size_int_response.append({'size':s,'intensity':ins,'corr_response':((ins>0) or (iholo>0)), 'holo': iholo})#(np.random.binomial(1,. 25)>0)), 'holo': iholo})
                             
-                            else:
-                                if expInfo['restrict_holo']:
-                                    if iholo>0 and ins==100:
-                                        2+2
-                                mini_size_int_response.append({'size':s,'intensity':ins,'corr_response':ins>0, 'holo': iholo})
+                            mini_size_int_response.append({'size':s,'intensity':ins,'corr_response':ins>0, 'opto': iholo})
             random.shuffle(mini_size_int_response)
             
             self.size_int_response += mini_size_int_response
            
-        self.size_int_response['iti'] = np.random.randint(expInfo['isi_range'][0],expInfo['isi_range'][1],size=(len(self.size_int_response['size']),1,1))
         pd.DataFrame(self.size_int_response).to_csv('M:/Hayley/size_int_resp.csv')
-
-
 
         #and some more general variables
         self.phase_increment = tf/FR
@@ -180,27 +170,29 @@ class ContrastDetectionTask:
         self.comm_daq.do_channels.add_do_chan('Dev2/Port0/Line5') # trigger to master
         self.comm_daq.do_channels.add_do_chan('Dev2/Port0/Line2') # trigger to SI
 
+        self.led_daq = ni.Task()
+        self.led_daq.ao_channels.add_ao_voltage_chan('Dev2/ao0')
+
+
+        self.led_daq.timing.cfg_samp_clk_timing(rate=expInfo['fs'],
+            sample_mode= ni.constants.AcquisitionType.FINITE, 
+            samps_per_chan= self.opto_length)
+        self.led_writer = stream_writers.AnalogMultiChannelWriter(self.led_daq.out_stream,
+                auto_start=False)
+        print('other daqs launched')
+        self.fs=expInfo['fs']#TOFO: why here?
+
         print('other daqs launched')
          #maybe temp, add some display text
         self.text = visual.TextStim(win=self.win, text='ready to go, waiting for keypress', pos = [0,0])
         self.text.draw()
         self.win.flip()
-        e=event.waitKeys()
-        if len(e)>0:
-            if e[0]!='q':
-                self.exp_timer.reset()
-                self.exp = data.ExperimentHandler('ContrastDetectionTask','v0',
-                    dataFileName = self.filename,
-                    extraInfo = expInfo)
-                self.run_blocks()
-            else:
-                self.water_daq.stop()
-                self.lick_daq.stop()
-                self.comm_daq.stop()
-                self.water_daq.close()
-                self.lick_daq.close()
-                self.comm_daq.close()
-
+        event.waitKeys()
+        self.exp_timer.reset()
+        self.exp = data.ExperimentHandler('ContrastDetectionTask','v0',
+            dataFileName = self.filename,
+            extraInfo = expInfo)
+        self.run_blocks()
         
     def run_blocks(self):
         user_quit = False 
@@ -217,9 +209,10 @@ class ContrastDetectionTask:
 
                 user_quit = self.run_trial(trial)
                 if not user_quit:
-                    user_quit, false_alarm_times = self.run_isi(trial)
-                    self.trials.data.add('FATimes',np.unique(false_alarm_times))
-                    #self.trials.data.add('OtherLickTimes', other_licking_times)
+                   user_quit, fa_times, fa_times_abs, led_times_abs = self.run_isi()
+                   self.trials.data.add('FATimes',fa_times)
+                   self.trials.data.add('FATimesAbs',fa_times_abs)
+                   self.trials.data.add('LEDTimesAbs',led_times_abs)
                 self.exp.nextEntry()
 
             self.exp.saveAsWideText(self.filename)
@@ -229,6 +222,8 @@ class ContrastDetectionTask:
             self.water_daq.stop()
             self.lick_daq.stop()
             self.comm_daq.stop()
+            self.led_daq.stop()
+            self.led_daq.close()
             self.water_daq.close()
             self.lick_daq.close()
             self.comm_daq.close()
@@ -249,6 +244,17 @@ class ContrastDetectionTask:
 
             self.grating.draw()
             self.win.flip()
+
+
+    def gen_pwm_pulse(self):
+        arr = np.ones((1,self.opto_length))*5#*self.exp.extraInfo['blue_volts']
+        arr[:,-100:]=0.0
+        return arr
+
+    def gen_no_pulse(self):
+        #TODO: don't regen
+        arr = np.zeros((1,self.opto_length))
+        return arr
 
     def run_trial(self, trial):
         trial_still_running = True
@@ -291,7 +297,7 @@ class ContrastDetectionTask:
 
                 
                 
-            elif current_time >= self.stim_time + self.stim_delay and current_time<self.stim_delay+self.stim_time+self.response_window:
+            elif current_time >= self.stim_time + self.stim_delay:
                 self.grating.setContrast(0)
                 self.grating.draw()
 
@@ -302,7 +308,7 @@ class ContrastDetectionTask:
                     self.deliver_reward()
                 
                 response_time = current_time
-                #print(response_time)
+                print(response_time)
                 trial_still_running = False
                 self.trials.data.add('Response', 1)
                 self.trials.data.add('RespTime', response_time)
@@ -315,24 +321,7 @@ class ContrastDetectionTask:
             self.win.flip()
         
         self.comm_daq.stop()
-        if trial['corr_response']==False and responded==True:
-            user_quit = self.deliver_catch_timeout(user_quit)
         return user_quit
-
-    def deliver_catch_timeout(self, user_quit):
-        #added on 3/10/23
-        self.isi_timer.reset()
-        self.win.flip()
-        timeout = np.random.randint(*self.timeout_range)
-        while self.isi_timer.getTime()<timeout:
-            e=event.getKeys()
-            if len(e)>0:
-                if e[0]=='q':
-                    user_quit=True
-                    return user_quit, []
-        return user_quit
-
-
 
     def deliver_reward(self):
         print('delivering reward')
@@ -344,44 +333,45 @@ class ContrastDetectionTask:
 
     def run_isi(self):
         user_quit = False
-        isi = np.random.randint(*self.isirange)
-        #isi = 
-
+        isi = random.uniform(self.isimin,self.isimax)
+        rand_opto_on_time = isi-random.uniform(*self.rand_opto_range)
         self.isi_timer.reset()
-        #self.text.text = 'starting ' + str(isi) + ' countdown'
-        #self.text.draw()
-        self.win.flip()
+
+        #prep led
+        led_cond_next_trial = self.trials.getFutureTrial()['opto']
+        print(self.trials.getFutureTrial()['opto'], isi, rand_opto_on_time)
+        led_output_next_trial = self.led_cond_function_key[led_cond_next_trial]
+
         false_alarm_times = []
-        other_licking_times = []
+        false_alarm_times_abs = []
+        led_on_times_abs = []
         while self.isi_timer.getTime() < isi:
             e=event.getKeys()
             if len(e)>0:
                 if e[0]=='q':
                     user_quit=True
-                    return user_quit, []
-            responded = self.lick_daq.read()
-            #7/10/22 removed bc causing errors
-            #if responded:
-            #        false_alarm_times.append(round(self.trial_timer.getTime(),1))
-
+                    return user_quit, [],[],[]
+            if (self.random_opto and self.isi_timer.getTime() > rand_opto_on_time and
+                self.led_daq.is_task_done()):
+                print('trying to launch led')
+                self.led_daq.stop()
+                self.led_writer.write_many_sample(led_output_next_trial())
+                self.led_daq.start()
+                led_on_times_abs.append(round(core.getTime(),2))
             if self.isi_timer.getTime() > self.grace_time: #if we're out of grace period
                 #check for a false alarm
+                responded = self.lick_daq.read()
                 if responded:
                     print('false alarm!')
-                    #false_alarm_times.append(round(self.trial_timer.getTime(),2))
-                    isi = np.random.randint(*self.timeout_range)
-                    self.isi_timer.reset()
-                    self.intertrial_isi_count += 1
+
                     false_alarm_times.append(round(self.trial_timer.getTime(),2))
-                    #self.text.text = 'FA! restarting ' + str(isi) + ' countdown. total IT FA: ' + str(self.intertrial_isi_count)
+                    false_alarm_times_abs.append(round(core.getTime(),2))
+                    isi = np.random.randint(self.isimin,self.isimax)
+                    self.isi_timer.reset()
+                    #self.text.text = 'false alarm! now restarting ' + str(isi) + ' countdown'
                     #self.text.draw()
                     #self.win.flip()
-            #else:
-            #    responded = self.lick_daq.read()
-            #    if responded:
-            #        other_licking_times.append(round(self.trial_timer.getTime(),2))
-        print('finishing run isi')
-        return user_quit, false_alarm_times    
+        return user_quit, false_alarm_times, false_alarm_times_abs, led_on_times_abs
 
 if __name__ == '__main__':
     ContrastDetectionTask()
