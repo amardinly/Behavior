@@ -14,9 +14,9 @@ class ContrastDetectionTask:
 
         expInfo = {'mouse':'Mfake',
         'date': datetime.datetime.today().strftime('%Y%m%d-%H_%M_%S'),
-        'I(mA)': '0',
-        'T(uS)': '0',
         'flicker': True,
+        'is_holo': False,
+        'n_holo':2,
         'Depth': '0',
         'monitor_dist': 10.0,
         'position_1': 0,
@@ -30,25 +30,31 @@ class ContrastDetectionTask:
 
         self.filename = base_dir + expInfo['date']+'_' + expInfo['mouse']+'_nobeh_contr_'
         
-        self.exp = data.ExperimentHandler('NoBehContrastDisplay','v0',
-            dataFileName = self.filename,
-            extraInfo = expInfo)
+        
 
         #stimulus variables
         tf = 2 #temporal frequency
         position = np.array([expInfo['position_1'], expInfo['position_2']])
         sf = .08
-        sizes = [0,30]
+        sizes = [0,20]
         intensities = {}
         intensities[0] = [0]
-        intensities[30] =  [4,6,32,64]
-        #intensities[30] =  [4,8,100]#[8,16,64,80,90,100]#[7,16,32,64,90,100]#[5, 8, 16, 64, 100]#[4,8,16,64,90,100]#[2,8,16,32,64,100]
-        #intensities[10] = [2,16,32,64, 100]
+        #intensities[20]=[32,100]
+        intensities[20] =  [16,64,100]
+        expInfo['static']=True
+        expInfo['noise']=False
+        self.noise = expInfo['noise']
+
+
+        holo_weights = [1]
+        if expInfo['is_holo']:
+            holo_weights = [1]*expInfo['n_holo']
+
         
         #task variables
         self.stim_delay = .2 #in s
         self.stim_time = .5 #in s
-        self.isi_length = 3.5
+        self.isi_length = 4
         tf=2
     
         #monitor variables
@@ -77,11 +83,21 @@ class ContrastDetectionTask:
         self.size_int_response = []
         #mult = math.ceil(500/(sum([len(intensities(s)) for s in sizes])*4))
         #print('I think mult should be ', mult)
-        for _ in range(expInfo['repeats']):
-            for s in sizes:
-                for ins in intensities[s]:
-                    self.size_int_response.append({'size':s,'intensity':ins,'corr_response':ins>0})
-        random.shuffle(self.size_int_response)
+        self.size_int_response = []
+        #mult = math.ceil(500/(sum([len(intensities(s)) for s in sizes])*4))
+        #print('I think mult should be ', mult)
+        for temp in range(expInfo['repeats']):
+            mini_size_int_response = []
+            for iholo in range(len(holo_weights)):
+                for _ in range(holo_weights[iholo]):
+                    for s in sizes:
+                        for ins in intensities[s]:
+                            mini_size_int_response.append({'size':s,'intensity':ins,'corr_response':ins>0, 'holo': iholo})
+            random.shuffle(mini_size_int_response)
+            
+            self.size_int_response += mini_size_int_response
+           
+        pd.DataFrame(self.size_int_response).to_csv('M:/Hayley/size_int_resp.csv')
             
 
         #and some more general variables
@@ -103,6 +119,15 @@ class ContrastDetectionTask:
         self.comm_daq.do_channels.add_do_chan('Dev2/Port0/Line1') # to master, stim indicator
         self.comm_daq.do_channels.add_do_chan('Dev2/Port0/Line5') # trigger to master
         self.comm_daq.do_channels.add_do_chan('Dev2/Port0/Line2') # trigger to SI
+
+        self.text = visual.TextStim(win=self.win, text='ready to go, waiting for keypress', pos = [0,0])
+        self.text.draw()
+        self.win.flip()
+        event.waitKeys()
+
+        self.exp = data.ExperimentHandler('NoBehContrastDisplay','v0',
+            dataFileName = self.filename,
+            extraInfo = expInfo)
 
         print('other daqs launched')
         self.run_blocks()
@@ -133,9 +158,13 @@ class ContrastDetectionTask:
         phase = 0
         for frame in range(self.stim_on_frames):                   
             phase += self.phase_increment
-            self.grating.setPhase(phase)
+            if self.exp.extraInfo['static']:
+                self.grating.setPhase(0)
+            else:
+                self.grating.setPhase(phase)
             self.grating.draw()
             self.win.flip()
+
 
     def run_trial(self, trial):
         trial_still_running = True
@@ -162,7 +191,8 @@ class ContrastDetectionTask:
                     self.stim_time+self.stim_delay-.2):
 
                 self.grating.setContrast(trial['intensity']/100)
-                self.grating.setSize(trial['size']*self.pix_per_deg)
+                if not self.noise:
+                    self.grating.setSize(trial['size']*self.pix_per_deg)
                 if trial['intensity'] > 0:
                     self.comm_daq.write([True, True, False, False])
                 else:
