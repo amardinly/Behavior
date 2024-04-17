@@ -14,16 +14,15 @@ class ContrastDetectionTask:
         #variables for file id 
         base_dir = 'C:/Users/inctel/Documents/ContrastDetectionTask/'
 
-        expInfo = {'mouse':'Mfake',
+        expInfo = {'mouse':'DQ70.1',
         'date': datetime.datetime.today().strftime('%Y%m%d-%H_%M_%S'),
         'response_window': .5,
         'red_gain': 0,
         'blue_gain': 0,
-        'red_volts': 0,
+        'red_volts': 0.9,
         'blue_volts': 0,
         'random_opto': True,
-        'bg_contrast': 0.5,
-        'contr_change': True,
+        'bg_contrast': 0.05,
 
         }
         dlg = gui.DlgFromDict(dictionary=expInfo, title = 'Contrast Detection Task')
@@ -32,16 +31,16 @@ class ContrastDetectionTask:
         
         #stimulus variables
         tf = 2 #temporal frequency
-        sf = .08
-        default = int(expInfo['bg_contrast']*100)
-
-        sizes = [20]
+        sf = 0.08
+        sizes = [32]
         intensities = {}
-        #default is the catch trial condition, and should always be here!
-        intensities[20] = [default,15,20,25,100]
-        led_conds = ['none','square']
+        #intensities[20] = [0,0]
+        #intensities[20] = [0.5,1,1.5,2,5,100] #intensities gain of function
+        intensities[32] = [0,0.5,0.8,1,2,5,100] #thiis is s2
+       #intensities[20] = [0,4,8,16,100]#this is s3 [1,2,3,5,20,100] #intensities gamma noise
+        led_conds = ['square']#,'square']
         #'correlated_noise'
-         
+        
         #task variables
         self.stim_delay = 0 #in s
         self.stim_time = .5 #in s
@@ -50,10 +49,8 @@ class ContrastDetectionTask:
         self.isimax = 8 #in s
         self.rand_opto_range = [.2,1]
         self.grace_time = 1 #in s
-        self.water_time = 120 #in ms
+        self.water_time = 100 #in ms
         self.random_opto = expInfo['random_opto']
-        self.contr_change = expInfo['contr_change']
-        self.bg_contrast = expInfo['bg_contrast']
 
         #monitor variables
         monitor_width = 19.6 #in cm
@@ -110,28 +107,7 @@ class ContrastDetectionTask:
         
 
         print('set up some vars')
-       
-        #create trial conditions
-        #guess a shuffle size to make approx blocks of twenty
-        shuffle_n = int(24/(len(intensities[20])*len(led_conds)))
-        self.size_int_response = []
-        for temp in range(25):
-            for back_ori in np.random.permutation(['iso','cross']):
-                    mini_size_int_response = []
-                    for _ in range(shuffle_n): #how many blocks to shuffle in
-                        for s in sizes:
-                            for ins in intensities[s]:
-                                for led_cond in led_conds:
-                                    mini_size_int_response.append({
-                                        'size':s,'intensity':ins,
-                                        'corr_response':ins>default,
-                                        'led_cond': led_cond,
-                                        'back_ori':back_ori})
-                    random.shuffle(mini_size_int_response)
-                    self.size_int_response += mini_size_int_response
-        print('shuffle is', shuffle_n,'size of blocks', shuffle_n*len(intensities[20])*len(led_conds))
-        core.wait(2)
-         #initialize
+        #initialize
         expInfo['monitor_dist']=10.47
         monitor = monitors.Monitor('BoxMonitor1', width=monitor_width,
          distance=expInfo['monitor_dist'])
@@ -144,6 +120,24 @@ class ContrastDetectionTask:
         self.pix_per_deg = (monitor.getSizePix()[1]/
             (np.degrees(np.arctan(monitor_height/expInfo['monitor_dist']))))      
 
+        #create trial conditions
+        #guess a shuffle size to make approx blocks of twenty
+        shuffle_n = int(24/len(intensities[32]))
+        self.size_int_response = []
+        for temp in range(25):
+            for back_ori in ['iso','cross']:
+                    mini_size_int_response = []
+                    for _ in range(shuffle_n): #how many blocks to shuffle in
+                        for s in sizes:
+                            for ins in intensities[s]:
+                                for led_cond in led_conds:
+                                    mini_size_int_response.append({'size':s,'intensity':ins,
+                                        'corr_response':ins>0,
+                                        'led_cond': led_cond,
+                                        'back_ori':back_ori})
+                    random.shuffle(mini_size_int_response)
+                    self.size_int_response += mini_size_int_response
+        
         #and some more general variables
         self.phase_increment = tf/FR
         self.stim_on_frames = int(self.stim_time*FR)
@@ -357,11 +351,7 @@ class ContrastDetectionTask:
                 
             elif current_time >= self.stim_time + self.stim_delay:
                 #we are in response window
-                if self.contr_change:
-                    self.grating.setContrast(self.bg_contrast)
-                else:
-                    self.grating.setContrast(0)
-                    self.grating.setSize(0)
+                self.grating.setContrast(0)
                 self.grating.draw()
 
                 responded = self.read_lick()
@@ -389,10 +379,6 @@ class ContrastDetectionTask:
             self.big_grating.setOri(180-45)
         else:
             self.big_grating.setOri(180+45)
-        self.big_grating.draw()
-        self.grating.draw()
-        self.text.draw()
-        self.win.flip()
         self.led_daq.wait_until_done()
         self.led_daq.stop()
         return user_quit
