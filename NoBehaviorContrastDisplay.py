@@ -10,7 +10,7 @@ class ContrastDetectionTask:
     
     def __init__(self):
         #variables for file id 
-        base_dir = 'C:/Users/miscFrankenRig/Documents/ContrastDetectionTask/'
+        base_dir = 'C:/Users/hayle/Documents/ContrastDetectionTask/'
 
         expInfo = {'mouse':'Mfake',
         'date': datetime.datetime.today().strftime('%Y%m%d-%H_%M_%S'),
@@ -18,7 +18,7 @@ class ContrastDetectionTask:
         'is_holo': False,
         'n_holo':2,
         'Depth': '0',
-        'monitor_dist': 10.0,
+        'monitor_dist': 8,
         'position_1': 0,
         'position_2': 0,
         'repeats': 5,
@@ -36,11 +36,13 @@ class ContrastDetectionTask:
         tf = 2 #temporal frequency
         position = np.array([expInfo['position_1'], expInfo['position_2']])
         sf = .08
-        sizes = [0,20]
+        sizes = [0,20,50]
         intensities = {}
         intensities[0] = [0]
         #intensities[20]=[32,100]
-        intensities[20] =  [16,64,100]
+        intensities[20] =  [4,8,16,100]
+        intensities[50] =  [100]
+        orientations = [ 180+45]
         expInfo['static']=True
         expInfo['noise']=False
         self.noise = expInfo['noise']
@@ -54,7 +56,7 @@ class ContrastDetectionTask:
         #task variables
         self.stim_delay = .2 #in s
         self.stim_time = .5 #in s
-        self.isi_length = 4
+        self.isi_length = 3.5
         tf=2
     
         #monitor variables
@@ -62,22 +64,14 @@ class ContrastDetectionTask:
         monitor_height = 15#13 #in cm
 
         
-        #initialize
-        self.monitor = monitors.Monitor('iPadRetinaApril21', width=monitor_width, distance=expInfo['monitor_dist'])
-        self.win = visual.Window(fullscr=True, monitor=self.monitor, units="pix", size=[1600, 1200])
-        
-        print('generated window')
-        FR = self.win.getActualFrameRate()
-        expInfo['FR'] = FR 
+       
         expInfo['monitor_height'] = monitor_height
         expInfo['position'] = position
         expInfo['stim_time'] = self.stim_time
         expInfo['sf'] = sf
         expInfo['tf'] = tf
         expInfo['isi_length'] = self.isi_length
-        self.pix_per_deg = self.monitor.getSizePix()[1]/(np.degrees(np.arctan(monitor_height/expInfo['monitor_dist'])))       
-        
-        print('set up some vars')
+
         
         #create trial conditions
         self.size_int_response = []
@@ -92,13 +86,32 @@ class ContrastDetectionTask:
                 for _ in range(holo_weights[iholo]):
                     for s in sizes:
                         for ins in intensities[s]:
-                            mini_size_int_response.append({'size':s,'intensity':ins,'corr_response':ins>0, 'holo': iholo})
+                            if ins!=0:
+                                for ori in orientations:
+                                    mini_size_int_response.append({'size':s,'intensity':ins,'corr_response':ins>0, 'holo': iholo, 'orientation': ori})
+                            else:
+                                mini_size_int_response.append({'size':s,'intensity':ins,'corr_response':ins>0, 'holo': iholo, 'orientation': orientations[0]})
             random.shuffle(mini_size_int_response)
             
             self.size_int_response += mini_size_int_response
-           
+        
+
+        print('set up some vars')
+        print(str(len(self.size_int_response))+' trials, est. duration '
+            + str(round(len(self.size_int_response)*(self.stim_delay+self.stim_time+self.isi_length)/60)))
+        core.wait(2)
         pd.DataFrame(self.size_int_response).to_csv('M:/Hayley/size_int_resp.csv')
             
+        #initialize
+        self.monitor = monitors.Monitor('iPadRetinaApril21', width=monitor_width, distance=expInfo['monitor_dist'])
+        self.win = visual.Window(fullscr=True, monitor=self.monitor, units="pix", size=[1600, 1200])
+        
+        print('generated window')
+        FR = self.win.getActualFrameRate()
+        expInfo['FR'] = FR 
+        self.pix_per_deg = self.monitor.getSizePix()[1]/(np.degrees(np.arctan(monitor_height/expInfo['monitor_dist'])))       
+        
+
 
         #and some more general variables
         self.phase_increment = tf/FR
@@ -120,17 +133,19 @@ class ContrastDetectionTask:
         self.comm_daq.do_channels.add_do_chan('Dev2/Port0/Line5') # trigger to master
         self.comm_daq.do_channels.add_do_chan('Dev2/Port0/Line2') # trigger to SI
 
-        self.text = visual.TextStim(win=self.win, text='ready to go, waiting for keypress', pos = [0,0])
-        self.text.draw()
+        #self.text = visual.TextStim(win=self.win, text='ready to go, have' +str(len(self.size_int_response))+' trials, est. duration '
+        #    + str(len(self.size_int_response)*(self.stim_delay+self.stim_time+self.isi_length)/60) + ' waiting for keypress', pos = [0,0])
+        #self.text.draw()
         self.win.flip()
-        event.waitKeys()
-
-        self.exp = data.ExperimentHandler('NoBehContrastDisplay','v0',
-            dataFileName = self.filename,
-            extraInfo = expInfo)
-
-        print('other daqs launched')
-        self.run_blocks()
+        e=event.waitKeys()
+        if len(e)>0:
+            if e[0]!='q':
+                self.exp = data.ExperimentHandler('NoBehContrastDisplay','v0',
+                    dataFileName = self.filename, extraInfo = expInfo)
+                self.run_blocks()
+            else:
+                self.comm_daq.stop()
+                self.comm_daq.close()
         
     def run_blocks(self):
         user_quit = False 
@@ -191,6 +206,7 @@ class ContrastDetectionTask:
                     self.stim_time+self.stim_delay-.2):
 
                 self.grating.setContrast(trial['intensity']/100)
+                self.grating.setOri(trial['orientation'])
                 if not self.noise:
                     self.grating.setSize(trial['size']*self.pix_per_deg)
                 if trial['intensity'] > 0:
