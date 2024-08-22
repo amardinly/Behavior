@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import glob
+from psychopy.tools.filetools import fromFile
 import argparse
 
 
@@ -12,14 +13,18 @@ args = parser.parse_args()
 mouse=args.mouse[0]
 plt.ion()
 #mouse = 'HB122_1'
-all_files = glob.glob('C:/Users/miscFrankenRig/Documents/ContrastDetectionTask/*'+mouse+'*_trials.tsv')
+all_files = glob.glob('C:/Users/hayle/Documents/ContrastDetectionTask/*'+mouse+'*_trials.tsv')
 all_files.sort()
 
 for file in reversed(all_files):
 	df = pd.read_csv(file,
 		sep='\t')
+	print(file.split('/')[-1].split(mouse)[0])
+
+	print(fromFile(file.replace('_trials.tsv','.psydat')).extraInfo['position'])
 
 	df=df[df.ran==1]
+	df=df[df.intensity>=0]
 
 	try:
 			df["TrialNumber"] = np.genfromtxt(df.TrialNumber.values)
@@ -62,14 +67,13 @@ for file in reversed(all_files):
 				perc_cor.append(len(df[(df.Response==1)&(df.intensity==intensity)])/len(df[df.intensity==intensity]))
 			plt.plot(intensities+1, perc_cor,marker='o',c='k')
 
-	print(file.split('/')[-1].split(mouse)[0])
-	print(len(df))
-	for holo in df.holo.unique():
-		print('hit rate', holo)
-		print(round(len(df[(df.Response==1)&(df.intensity>0)&(df.holo==holo)])/len(df[(df.intensity>0)&(df.holo==holo)]),3),
-			round(len(df[(df.Response==1)&(df.intensity>0)&(df.intensity<100)&(df.holo==holo)])/len(df[(df.intensity>0)&(df.holo==holo)]),3))
+	print('n trials:',len(df))
 	print('unique intensities', df.intensity.unique())
-	print('sizes',df['size'].unique())
+
+	for holo in df.holo.unique():
+		print('holo', int(holo),'hitrate:',round(len(df[(df.Response==1)&(df.intensity>0)&(df.holo==holo)])/len(df[(df.intensity>0)&(df.holo==holo)])*100),
+			round(len(df[(df.Response==1)&(df.intensity>0)&(df.intensity<100)&(df.holo==holo)])/len(df[(df.intensity>0)&(df.holo==holo)])*100))
+	#print('sizes',df['size'].unique())
 	
 	
 	for i,it in enumerate(intensities):
@@ -82,9 +86,13 @@ for file in reversed(all_files):
 
 	plt.subplot(1,2,2)
 	plt.gca().clear()
-	df=df.set_index('TrialNumber')
+	#df=df.set_index('TrialNumber')
+	df=df[(df.intensity>=0)]
+	df=df.reset_index()
+	df=df[df.holo==0]
 	plt.plot(df.Response.rolling(20).mean())
-	plt.plot(df[df.intensity==df.intensity.max()].Response.rolling(10).mean())
+	plt.plot(df[(df.intensity==df.intensity.max())].Response.rolling(10).mean())
+	#plt.plot(df[df.intensity==0].Response.rolling(10).mean())
 
 
 	plt.xlabel('trials')

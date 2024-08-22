@@ -3,6 +3,9 @@ import numpy as np
 import datetime
 import random
 import pickle
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
+
 import pandas as pd
 from numpy.random import randint
 import nidaqmx as ni
@@ -36,8 +39,8 @@ class ContrastDetectionTask:
         expInfo['reward_holo'] = False #added these distinctions 8.30.23
         self.alt_stim=False
 
-        base_dir = 'C:/Users/miscFrankenRig/Documents/ContrastDetectionTask/'
-        remote_dir = 'M:/Hayley/ContrastDetectionTask/'
+        base_dir = 'C:/Users/hayle/Documents/ContrastDetectionTask/'
+        remote_dir = 'N:/Hayley/ContrastDetectionTask/'
         self.filename = base_dir + expInfo['date']+'_' + expInfo['mouse']
         self.remote_filename = remote_dir + expInfo['date']+'_' + expInfo['mouse']
         
@@ -46,21 +49,16 @@ class ContrastDetectionTask:
         position = np.array([expInfo['position_1'], expInfo['position_2']])
         sf = .08
         sizes = [0,20]
-        intensities = {}
-        intensities[0] = [0]
-        #intensities[20] = [8,16,100,100,100]
-        intensities[20] = [8,16,32,100]#[8,16,32,100,100]#[4,8,16,100]#[10,16,64,100]#8,16,64,100]#[12,16,64,100]#[10,16,64,100]#[10,16,64,100]#[16,32,64,100,100]#[8,16,32,64,100,100]
-        #intensities[25] = [20, 32,100,100]
+        intensities = { 0: [0],
+                        20: [16,100,100,100]}
         expInfo['static']=True
-        expInfo['noise'] = False
-        self.noise = expInfo['noise']
-        #intensities[10] = [2,16,32,64, 100]
+        expInfo['noise'] = self.noise = False
+
         holo_weights = [2]
         if expInfo['is_holo']:
             holo_weights = [1]*expInfo['n_holo']
             if expInfo['n_holo']==2:
                 holo_weights = [2]*expInfo['n_holo']
-            #holo_weights= [2,1]
             #if expInfo['is_holotrain']:
             #        holo_weights=[1,1]
         
@@ -71,7 +69,7 @@ class ContrastDetectionTask:
         expInfo['isi_range'] = [3,9] # in s 2/23/22 moved to 8
         self.timeout_range= [4,9] #currently only used for catch timeout
         self.grace_time = 1 #in s
-        self.water_time = 110 #5/14/22 changed from 125 #5/3 100 #in ms
+        self.water_time = 185 #in ms
         tf=2
 
         assert self.response_window<2
@@ -83,9 +81,10 @@ class ContrastDetectionTask:
         
         #initialize
         self.monitor = monitors.Monitor('iPadRetinaApril21', width=monitor_width, distance=expInfo['monitor_dist'])
-        self.win = visual.Window(fullscr=True, monitor=self.monitor, units="pix", size=[1600, 1200])
+        self.win = visual.Window(fullscr=True,allowGUI=False,pos=[0,0],#size=[2048,1536],
+            monitor=self.monitor, units="pix",)# size=[1600, 1200])
         
-        print('generated window')
+        print('generated window,size is',self.monitor.getSizePix(), self.win.size)
         FR = self.win.getActualFrameRate()
         expInfo['FR'] = FR 
         expInfo['monitor_height'] = monitor_height
@@ -97,12 +96,12 @@ class ContrastDetectionTask:
         expInfo['response_window'] = self.response_window
         expInfo['restrict_holo'] = False
 
-        self.pix_per_deg = self.monitor.getSizePix()[1]/(np.degrees(np.arctan(monitor_height/expInfo['monitor_dist'])))       
+        self.pix_per_deg = self.win.size[1]/(np.degrees(np.arctan(monitor_height/expInfo['monitor_dist']))) #self.monitor.getSizePix()[1]/(np.degrees(np.arctan(monitor_height/expInfo['monitor_dist'])))       
         
         print('set up some vars')
         
         self.size_int_response = self.populate_trials(expInfo,holo_weights,sizes,intensities)
-        pd.DataFrame(self.size_int_response).to_csv('M:/Hayley/size_int_resp.csv')
+        pd.DataFrame(self.size_int_response).to_csv('N:/Hayley/size_int_resp.csv')
 
         #and some more general variables
         self.phase_increment = tf/FR
@@ -143,8 +142,8 @@ class ContrastDetectionTask:
         print('other daqs launched')
 
         #maybe temp, add some display text
-        #self.text = visual.TextStim(win=self.win, text='ready to go, waiting for keypress', pos = [0,0])
-        #self.text.draw()
+        self.text = visual.TextStim(win=self.win, text='ready to go, waiting for keypress', pos = [0,0])
+        self.text.draw()
 
         self.win.flip()
         e=event.waitKeys()
@@ -229,8 +228,10 @@ class ContrastDetectionTask:
 
             self.exp.saveAsWideText(self.filename)
             self.trials.saveAsWideText(self.filename + '_trials')
+            self.exp.saveAsWideText(self.remote_filename)
+            self.trials.saveAsWideText(self.remote_filename + '_trials')
             #save remote
-            self.trials.saveAsWideText('M:/Hayley/PeriOnline/curr_trials.tsv')
+            self.trials.saveAsWideText('N:/Hayley/PeriOnline/curr_trials.tsv')
             self.water_daq.stop()
             self.lick_daq.stop()
             self.comm_daq.stop()
@@ -391,7 +392,7 @@ class ContrastDetectionTask:
                 responded = self.lick_daq.read()
                 if responded:
                     other_licking_times.append(round(self.trial_timer.getTime(),1))
-            if do_isi_stim and (isi-self.isi_timer.getTime())<3: #once there's 3 seconds left, do isi stim, but only once
+            if do_isi_stim and (isi-self.isi_timer.getTime())<3.5: #once there's 3 seconds left, do isi stim, but only once
                 isi_stim_time = self.trial_timer.getTime()
                 print('running isi stim!')
                 self.run_isi_stim()
