@@ -22,8 +22,8 @@ class ContrastDetectionTask:
         'red_volts': 0,
         'blue_volts': 0,
         'random_opto': True,
-        'bg_contrast': 0.5,
-        'contr_change': True,
+        'bg_contrast': 0,
+        'contr_change': False,
 
         }
         dlg = gui.DlgFromDict(dictionary=expInfo, title = 'Contrast Detection Task')
@@ -295,9 +295,10 @@ class ContrastDetectionTask:
 
     def present_grating(self):
         phase = 0
-        for frame in range(self.stim_on_frames):                   
-            #phase += self.phase_increment
-            #self.grating.setPhase(phase)
+        for frame in range(self.stim_on_frames):
+            if self.bg_contrast==0:                   
+                phase += self.phase_increment
+                self.grating.setPhase(phase)
             self.big_grating.draw()
             self.grating.draw()
             self.text.draw()
@@ -434,8 +435,9 @@ class ContrastDetectionTask:
                     false_alarm_times.append(round(self.trial_timer.getTime(),2))
                     false_alarm_times_abs.append(round(core.getTime(),2))
                     isi = np.random.randint(self.isimin,self.isimax)
+                    rand_opto_on_time = isi-random.uniform(*self.rand_opto_range)
                     self.isi_timer.reset()
-                    #self.text.text = 'false alarm! now restarting ' + str(isi) + ' countdown'
+                    #self.text.text = 'false alarm! now restarting ' + str(isi) + ' countdown, opto is',led_cond_next_trial
                     #self.text.draw()
                     #self.win.flip()
         return user_quit, false_alarm_times, false_alarm_times_abs, led_on_times_abs
