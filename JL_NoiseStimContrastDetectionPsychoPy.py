@@ -10,10 +10,14 @@ import matplotlib.pyplot as plt
 
 class ContrastDetectionTask:
     
+    #initialization, sets up parameters for entrance in file and also the columns 
+    #that will be saved in the resulting data file. 
     def __init__(self):
         #variables for file id 
         base_dir = 'C:/Users/inctel/Documents/ContrastDetectionTask/'
-
+        
+        #addition by JL (random_stim_loc) 
+        
         expInfo = {'mouse':'Mfake',
         'date': datetime.datetime.today().strftime('%Y%m%d-%H_%M_%S'),
         'response_window': .5,
@@ -22,6 +26,7 @@ class ContrastDetectionTask:
         'red_volts': 0.,
         'blue_volts': 0.,
         'random_opto': True,
+        'random_stim_loc':False,
         'bg_contrast': 0.,
         'contr_change': False,
 
@@ -37,6 +42,9 @@ class ContrastDetectionTask:
 
         sizes = [20]
         intensities = {}
+        
+        
+        
         #default is the catch trial condition, and should always be here!
         #NOISE (BG CONTRAST 0)
         intensities[20] = [default,1,2,3,5,20,100]
@@ -56,14 +64,22 @@ class ContrastDetectionTask:
         self.isimax = 8 #in s
         self.rand_opto_range = [.2,1]
         self.grace_time = 1 #in s
-        self.water_time = 90 #in ms
+        self.water_time = 120 #in ms
         self.random_opto = expInfo['random_opto']
+        #addition by Jl 
+        self.random_stim_loc = expInfo['random_stim_loc'] 
         self.contr_change = expInfo['contr_change']
         self.bg_contrast = expInfo['bg_contrast']
 
         #monitor variables
         monitor_width = 19.6 #in cm
         monitor_height = 9.5 #in cm
+        
+        # addition made by JL 
+        # the position conditions, with their key to locations on screen
+        direction_cond = ['left','middle','right']
+        
+        
 
         #led variables
         
@@ -169,6 +185,13 @@ class ContrastDetectionTask:
         self.text = visual.TextStim(win=self.win, text='startup', pos = [-250,-150],
             height=10,opacity=.35)
         
+        #addition by JL 
+        #led_size = 10*self.pix_per_deg 
+        width = monitor.getSizePix()[0]
+        self.position_key = {'left': [-width/4, 0], 'middle': [0, 0], 'right': [width/4, 0]}
+        
+        
+        
         #final setup
         self.filename = base_dir + expInfo['date']+'_' + expInfo['mouse']
         
@@ -196,7 +219,8 @@ class ContrastDetectionTask:
         print('other daqs launched')
         self.fs=expInfo['fs']#TOFO: why here?
         self.run_blocks()
-        
+       
+    # 
     def run_blocks(self):
         user_quit = False 
         while not user_quit:
@@ -336,6 +360,13 @@ class ContrastDetectionTask:
             led_cond_this_trial = trial['led_cond']
             led_output_this_trial = self.led_cond_function_key[led_cond_this_trial]
             self.led_writer.write_many_sample(led_output_this_trial())
+        #addition by Jl 
+        if self.random_stim_loc: 
+            direction = random.choice(['left', 'middle', 'right'])
+            #expInfo['position'] = self.position_key[direction]
+            self.grating.pos = self.position_key[direction]
+            self.trials.data.add('StimPosition', direction)
+            
         while trial_still_running:
 
             e=event.getKeys()

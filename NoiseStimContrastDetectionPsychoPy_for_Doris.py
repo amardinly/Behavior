@@ -36,9 +36,9 @@ class ContrastDetectionTask:
         intensities = {}
         #intensities[20] = [0,0]
         #intensities[20] = [0.5,1,1.5,2,5,100] #intensities gain of function
-        intensities[32] = [0,0.5,0.8,1,2,5,100] #thiis is s2
+        intensities[32] = [0,0.5,0.8,1,2,5,100] 
        #intensities[20] = [0,4,8,16,100]#this is s3 [1,2,3,5,20,100] #intensities gamma noise
-        led_conds = ['square']#,'square']
+        led_conds = ['none','noise'] #,'square']
         #'correlated_noise'
         
         #task variables

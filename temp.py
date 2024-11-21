@@ -17,13 +17,13 @@ class ContrastDetectionTask:
         expInfo = {'mouse':'Mfake',
         'date': datetime.datetime.today().strftime('%Y%m%d-%H_%M_%S'),
         'response_window': .5,
-        'red_gain': 0.,
-        'blue_gain': 0.,
-        'red_volts': 0.,
-        'blue_volts': 0.,
+        'red_gain': 0,
+        'blue_gain': 0,
+        'red_volts': 0,
+        'blue_volts': 2.7,
         'random_opto': True,
-        'bg_contrast': 0.,
-        'contr_change': False,
+        'bg_contrast': 0.5,
+        'contr_change': True,
 
         }
         dlg = gui.DlgFromDict(dictionary=expInfo, title = 'Contrast Detection Task')
@@ -38,14 +38,8 @@ class ContrastDetectionTask:
         sizes = [20]
         intensities = {}
         #default is the catch trial condition, and should always be here!
-        #NOISE (BG CONTRAST 0)
-        intensities[20] = [default,1,2,3,5,20,100]
-        led_conds = ['none','square','noise']
-
-        #ISO VS CROSS (BG CONTRAST 0.5)
-        #intensities[20] = [default,50,55,60,65,70,100]
-        #led_conds = ['none','square']
-
+        intensities[20] = [default,15,20,25,100]
+        led_conds = ['none','square']
         #'correlated_noise'
          
         #task variables
@@ -56,7 +50,7 @@ class ContrastDetectionTask:
         self.isimax = 8 #in s
         self.rand_opto_range = [.2,1]
         self.grace_time = 1 #in s
-        self.water_time = 90 #in ms
+        self.water_time = 120 #in ms
         self.random_opto = expInfo['random_opto']
         self.contr_change = expInfo['contr_change']
         self.bg_contrast = expInfo['bg_contrast']
@@ -73,7 +67,7 @@ class ContrastDetectionTask:
         expInfo['firingRate'] = 300 
         expInfo['fs'] = 5000
         expInfo['gamma_rate'] = 35 #gamma rate in hz if using gamma stims
-        expInfo['blue_delay'] = 0#.002 #in seconds, delay from red to blue if using gamma
+        expInfo['blue_delay'] = .002 #in seconds, delay from red to blue if using gamma
 
         self.led_cond_function_key= {
             'none': self.gen_no_pulse,
@@ -141,7 +135,7 @@ class ContrastDetectionTask:
         expInfo['monitor_dist']=10.47
         monitor = monitors.Monitor('BoxMonitor1', width=monitor_width,
          distance=expInfo['monitor_dist'])
-        self.win = visual.Window(fullscr=True, monitor=monitor, 
+        self.win = visual.Window(fullscr=False, monitor=monitor, size=[300,300],
             units="pix")
         
         print('generated window')
@@ -301,10 +295,9 @@ class ContrastDetectionTask:
 
     def present_grating(self):
         phase = 0
-        for frame in range(self.stim_on_frames):
-            if self.bg_contrast==0:                   
-                phase += self.phase_increment
-                self.grating.setPhase(phase)
+        for frame in range(self.stim_on_frames):                   
+            #phase += self.phase_increment
+            #self.grating.setPhase(phase)
             self.big_grating.draw()
             self.grating.draw()
             self.text.draw()
@@ -324,7 +317,6 @@ class ContrastDetectionTask:
         self.water_daq.stop()
 
     def run_trial(self, trial):
-        print('trial', trial['intensity'])
         trial_still_running = True
         self.trial_timer.reset()
         responded = False
@@ -356,7 +348,6 @@ class ContrastDetectionTask:
                 if not self.random_opto:
                     self.led_daq.start()
 
-                print(trial['intensity'], trial['size'])
                 self.grating.setContrast(trial['intensity']/100)
                 self.grating.setSize(trial['size']*self.pix_per_deg)
                 self.present_grating()
@@ -413,7 +404,7 @@ class ContrastDetectionTask:
 
         #prep led
         led_cond_next_trial = self.trials.getFutureTrial()['led_cond']
-        print(self.trials.getFutureTrial()['led_cond'], isi, rand_opto_on_time)
+        print('starting',self.trials.getFutureTrial()['led_cond'], isi, rand_opto_on_time)
         led_output_next_trial = self.led_cond_function_key[led_cond_next_trial]
 
         false_alarm_times = []
@@ -441,9 +432,10 @@ class ContrastDetectionTask:
                     false_alarm_times.append(round(self.trial_timer.getTime(),2))
                     false_alarm_times_abs.append(round(core.getTime(),2))
                     isi = np.random.randint(self.isimin,self.isimax)
-                    rand_opto_on_time = isi-random.uniform(*self.rand_opto_range)
                     self.isi_timer.reset()
-                    #self.text.text = 'false alarm! now restarting ' + str(isi) + ' countdown, opto is',led_cond_next_trial
+                    print('reset time', round(self.isi_timer.getTime(),2),round(rand_opto_on_time,2),
+                        'new isi:', round(isi,3))
+                    #self.text.text = 'false alarm! now restarting ' + str(isi) + ' countdown'
                     #self.text.draw()
                     #self.win.flip()
         return user_quit, false_alarm_times, false_alarm_times_abs, led_on_times_abs

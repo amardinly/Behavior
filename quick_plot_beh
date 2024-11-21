@@ -1,4 +1,0 @@
-import pandas as pd
-
-df = pd.read_csv('C:/Users/miscFrankenRig/Documents/ContrastDetectionTask/20190904-14_44_51_HB67_3_217_trials.tsv',
-sep='\t')
