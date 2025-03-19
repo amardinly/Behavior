@@ -14,15 +14,15 @@ class ContrastDetectionTask:
         #variables for file id 
         base_dir = 'C:/Users/inctel/Documents/ContrastDetectionTask/'
 
-        expInfo = {'mouse':'DQ70.1',
+        expInfo = {'mouse':'DQ',
         'date': datetime.datetime.today().strftime('%Y%m%d-%H_%M_%S'),
         'response_window': .5,
-        'red_gain': 0,
-        'blue_gain': 0,
-        'red_volts': 0.9,
-        'blue_volts': 0,
+        'red_gain': 0.,
+        'blue_gain': 0.,
+        'red_volts': 0.,
+        'blue_volts': 0.,
         'random_opto': True,
-        'bg_contrast': 0.05,
+        'bg_contrast': 0.5,
 
         }
         dlg = gui.DlgFromDict(dictionary=expInfo, title = 'Contrast Detection Task')
@@ -32,13 +32,13 @@ class ContrastDetectionTask:
         #stimulus variables
         tf = 2 #temporal frequency
         sf = 0.08
-        sizes = [32]
+        sizes = [20]
         intensities = {}
-        #intensities[20] = [0,0]
-        #intensities[20] = [0.5,1,1.5,2,5,100] #intensities gain of function
-        intensities[32] = [0,0.5,0.8,1,2,5,100] 
+        #intensities[20] = [50,55,60,65,70,80,100]
+        intensities[20] = [0,1,2,3,5,20,100] #intensities gain of function
+        
        #intensities[20] = [0,4,8,16,100]#this is s3 [1,2,3,5,20,100] #intensities gamma noise
-        led_conds = ['none','noise'] #,'square']
+        led_conds = ['none','square']
         #'correlated_noise'
         
         #task variables
@@ -71,7 +71,6 @@ class ContrastDetectionTask:
             'square': self.gen_square_pulse,
             'noise': self.gen_synaptic_noise_stims,
             'correlated_noise': self.gen_correlated_noise_stims,
-            'gamma': self.gen_gamma_stims,
         }
 
 
@@ -111,7 +110,8 @@ class ContrastDetectionTask:
         expInfo['monitor_dist']=10.47
         monitor = monitors.Monitor('BoxMonitor1', width=monitor_width,
          distance=expInfo['monitor_dist'])
-        self.win = visual.Window(fullscr=True, monitor=monitor, 
+        self.win = visual.Window(fullscr=True, monitor=monitor,
+            
             units="pix")
         
         print('generated window')
@@ -122,7 +122,7 @@ class ContrastDetectionTask:
 
         #create trial conditions
         #guess a shuffle size to make approx blocks of twenty
-        shuffle_n = int(24/len(intensities[32]))
+        shuffle_n = int(24/len(intensities[20]))
         self.size_int_response = []
         for temp in range(25):
             for back_ori in ['iso','cross']:

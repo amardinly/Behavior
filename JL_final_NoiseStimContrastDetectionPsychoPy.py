@@ -7,14 +7,19 @@ from nidaqmx import stream_writers
 from alphaConvolve import alpha_convolve, gen_spiking, convolve_spiking
 import pandas as pd
 import matplotlib.pyplot as plt
+import time 
 
 class ContrastDetectionTask:
     
+    #initialization, sets up parameters for entrance in file and also the columns 
+    #that will be saved in the resulting data file. 
     def __init__(self):
         #variables for file id 
         base_dir = 'C:/Users/inctel/Documents/ContrastDetectionTask/'
-
-        expInfo = {'mouse':'DQ',
+        
+        #addition by JL (random_stim_loc) 
+        
+        expInfo = {'mouse':'Mfake',
         'date': datetime.datetime.today().strftime('%Y%m%d-%H_%M_%S'),
         'response_window': .5,
         'red_gain': 0.,
@@ -22,6 +27,8 @@ class ContrastDetectionTask:
         'red_volts': 0.,
         'blue_volts': 0.,
         'random_opto': True,
+        'random_stim_loc':False,
+        'random_in_blocks':False, 
         'bg_contrast': 0.,
         'contr_change': False,
 
@@ -29,19 +36,48 @@ class ContrastDetectionTask:
         dlg = gui.DlgFromDict(dictionary=expInfo, title = 'Contrast Detection Task')
         if dlg.OK==False: core.quit()
 
+        #JL edits: 
+        # If 'random_in_blocks' is checked, ask for two additional inputs
+        if expInfo['random_in_blocks']:
+            dlg_extra = gui.Dlg(title="Adjust Stimulus Positions")
+
+            dlg_extra.addField("On-Center Amount:", 0)
+            dlg_extra.addField("Off-Center Amount:", 0)
+            dlg_extra.addField("Cycles of Sessions:", 1)
+
+        while True:
+            user_input = dlg_extra.show()  # Keep showing the dialog until valid input
+            if dlg_extra.OK:
+                try:
+                    expInfo['on_center_amount'] = int(user_input[0])  # Update immediately
+                    expInfo['off_center_amount'] = int(user_input[1])
+                    expInfo['cycle_amount'] = int(user_input[2])
+            
+                    break  # Exit loop after valid input
+                except ValueError:
+                    print("Invalid input. Please enter numbers.")
+            else:
+                print("User canceled input.")
+                break
         
         #stimulus variables
         tf = 2 #temporal frequency
         sf = .08
         default = int(expInfo['bg_contrast']*100)
 
-        sizes = [20]
+        sizes = [10]
         intensities = {}
+        
+        
+        
+        #default is the catch trial condition, and should always be here!
+        #NOISE (BG CONTRAST 0)
+        intensities[10] = [default,1,2,3,5,20,100]
+        led_conds = ['none']
 
         #ISO VS CROSS (BG CONTRAST 0.5)
-        intensities[20] = [default,3,5,10,20,100]
-        #intensities[20] = [default,3,5,10,20,100]
-        led_conds = ['none']
+        #intensities[20] = [default,50,55,60,65,70,100]
+        #led_conds = ['none','square']
 
         #'correlated_noise'
          
@@ -53,14 +89,31 @@ class ContrastDetectionTask:
         self.isimax = 8 #in s
         self.rand_opto_range = [.2,1]
         self.grace_time = 1 #in s
-        self.water_time = 90 #in ms
+        self.water_time = 70 #in ms
+        
         self.random_opto = expInfo['random_opto']
+        #addition by Jl 
+        self.random_stim_loc = expInfo['random_stim_loc'] 
+        self.random_in_blocks = expInfo['random_in_blocks']
         self.contr_change = expInfo['contr_change']
         self.bg_contrast = expInfo['bg_contrast']
+        if expInfo['random_in_blocks']: 
+            self.center = True 
+            self.center_amount = expInfo['on_center_amount']
+            self.off_center_amount = expInfo['off_center_amount']
 
         #monitor variables
         monitor_width = 19.6 #in cm
         monitor_height = 9.5 #in cm
+        
+        # addition made by JL 
+        # the position conditions, with their key to locations on screen
+        #center and off center are 50/50 in occurences 
+        direction_cond = ['center', 'off_center', 'center']
+        #specific classification of different grids in off_center 
+        grid_spec_cond = ['top_left', 'top_mid', 'top_right', 'mid_left','mid_right', 'bottom_right', 'bottom_mid', 'bottom_right'] 
+        
+        
 
         #led variables
         
@@ -70,7 +123,7 @@ class ContrastDetectionTask:
         expInfo['firingRate'] = 300 
         expInfo['fs'] = 5000
         expInfo['gamma_rate'] = 35 #gamma rate in hz if using gamma stims
-        expInfo['blue_delay'] = 0 #.002 #in seconds, delay from red to blue if using gamma
+        expInfo['blue_delay'] = 0#.002 #in seconds, delay from red to blue if using gamma
 
         self.led_cond_function_key= {
             'none': self.gen_no_pulse,
@@ -116,7 +169,7 @@ class ContrastDetectionTask:
        
         #create trial conditions
         #guess a shuffle size to make approx blocks of twenty
-        shuffle_n = int(24/(len(intensities[20])*len(led_conds)))
+        shuffle_n = int(24/(len(intensities[10])*len(led_conds)))
         self.size_int_response = []
         for temp in range(25):
             for back_ori in np.random.permutation(['iso','cross']):
@@ -132,7 +185,7 @@ class ContrastDetectionTask:
                                         'back_ori':back_ori})
                     random.shuffle(mini_size_int_response)
                     self.size_int_response += mini_size_int_response
-        print('shuffle is', shuffle_n,'size of blocks', shuffle_n*len(intensities[20])*len(led_conds))
+        print('shuffle is', shuffle_n,'size of blocks', shuffle_n*len(intensities[10])*len(led_conds))
         core.wait(2)
          #initialize
         expInfo['monitor_dist']=10.47
@@ -156,6 +209,8 @@ class ContrastDetectionTask:
         self.big_grating = visual.GratingStim(win=self.win, size=900, 
                 pos=[0,0],
             sf=sf/self.pix_per_deg,units='pix', ori=180+45)
+        #addition by jl 
+        #stimulus size change  
         self.grating = visual.GratingStim(win=self.win, size=10*self.pix_per_deg, 
                 pos=expInfo['position']*self.pix_per_deg,
             sf=sf/self.pix_per_deg,units='pix', ori=180+45, mask='circle')
@@ -165,6 +220,16 @@ class ContrastDetectionTask:
         #maybe temp, add some display text
         self.text = visual.TextStim(win=self.win, text='startup', pos = [-250,-150],
             height=10,opacity=.35)
+        
+        #addition by JL 
+        #led_size = 10*self.pix_per_deg 
+        width = monitor.getSizePix()[0]
+        height = monitor.getSizePix()[1]
+        self.position_key = {'top_left': [-width/4, height/4], 'top_mid': [0, height/4],\
+        'top_right': [width/4, height/4], 'mid_left': [-width/4, 0], 'middle': [0,0], 'mid_right': [width/4, 0],\
+        'bottom_left': [-width/4, -height/4], 'bottom_mid': [0, -height/4], 'bottom_right': [width/4, -height/4],}
+        
+        
         
         #final setup
         self.filename = base_dir + expInfo['date']+'_' + expInfo['mouse']
@@ -192,8 +257,18 @@ class ContrastDetectionTask:
             auto_start=False)
         print('other daqs launched')
         self.fs=expInfo['fs']#TOFO: why here?
-        self.run_blocks()
-        
+
+        ## JL edit: 
+        self.final_cycle = expInfo['cycle_amount']
+        for i in range(expInfo['off_center_amount']):
+            self.current_cycle = i + 1
+            if i != 0: 
+                time.sleep(60)
+            self.run_blocks()
+            self.win.flip()
+            self.center = True 
+       
+    # 
     def run_blocks(self):
         user_quit = False 
         while not user_quit:
@@ -203,6 +278,8 @@ class ContrastDetectionTask:
             self.trials = data.TrialHandler(self.size_int_response, 1, method='sequential')
 
             self.exp.addLoop(self.trials)
+            
+        
             for trial in self.trials:
                 
                 if user_quit:
@@ -210,7 +287,16 @@ class ContrastDetectionTask:
 
                 user_quit = self.run_trial(trial)
 
-                self.text.text = 'trial number' + str(self.trials.thisTrialN)
+                #JL edit 
+                currentTrial = self.trials.thisTrialN
+                if self.random_in_blocks: 
+                    if self.center and currentTrial > self.center_amount:
+                        self.center = False 
+                    if currentTrial == (self.center_amount + self.off_center_amount + 1):
+                        break
+                self.text.text = 'trial number' + str(currentTrial)
+                
+                
                 self.text.draw()
                 #self.win.flip()
 
@@ -220,17 +306,25 @@ class ContrastDetectionTask:
                     self.trials.data.add('FATimesAbs',fa_times_abs)
                     self.trials.data.add('LEDTimesAbs',led_times_abs)
                 self.exp.nextEntry()
+
+            cycle_filename = f"{self.filename}_cycle_{self.current_cycle}"
             print('broken out')
-            self.exp.saveAsWideText(self.filename)
+            self.exp.saveAsWideText(cycle_filename)
             print('saved exp data')
-            self.trials.saveAsWideText(self.filename + '_trials')
+            self.trials.saveAsWideText(cycle_filename + '_trials')
             print('saved trial data')
-            self.water_daq.stop()
-            self.lick_daq.stop()
-            self.led_daq.stop()
-            self.water_daq.close()
-            self.lick_daq.close()
-            self.led_daq.close()
+            ##JL edit: 
+            if self.current_cycle == self.final_cycle: 
+                self.water_daq.stop()
+                self.lick_daq.stop()
+                self.led_daq.stop()
+                self.water_daq.close()
+                self.lick_daq.close()
+                self.led_daq.close()
+                self.win.flip() 
+            else: 
+                break 
+            
     
 
     def gen_synaptic_noise_stims(self):
@@ -298,14 +392,21 @@ class ContrastDetectionTask:
 
     def present_grating(self):
         phase = 0
+        response_time=0
         for frame in range(self.stim_on_frames):
             if self.bg_contrast==0:                   
                 phase += self.phase_increment
                 self.grating.setPhase(phase)
+            if response_time==0:
+                if self.read_lick():
+                    response_time = self.trial_timer.getTime()
             self.big_grating.draw()
             self.grating.draw()
             self.text.draw()
             self.win.flip()
+        ##self.trials.data.add('StimEndTime', self.exp_timer.getTime())
+        self.trials.data.add("StimEndTime",core.getTime())
+        return response_time
 
     def read_lick(self):
         lick = self.lick_daq.read()
@@ -319,6 +420,25 @@ class ContrastDetectionTask:
         core.wait(self.water_time/1000)
         self.water_daq.write(False)
         self.water_daq.stop()
+        
+    def trial_helper(self, trial, dir_cond): 
+        if self.random_stim_loc: 
+        
+            direction_cond = dir_cond
+            
+            #specific classification of different grids in off_center 
+            grid_spec_cond = ['top_left', 'top_mid', 'top_right', 'mid_left','mid_right', 'bottom_right', 'bottom_mid', 'bottom_right'] 
+        
+            direction = random.choice(direction_cond)
+            if direction == 'off_center':
+                specific_direction = random.choice(grid_spec_cond)
+            #expInfo['position'] = self.position_key[direction]
+                self.grating.pos = self.position_key[specific_direction]
+                self.trials.data.add('StimPosition', direction)
+            else: 
+                specific_direction = 'middle'
+                self.grating.pos = self.position_key[specific_direction]
+                self.trials.data.add('StimPosition', direction)
 
     def run_trial(self, trial):
         print('trial', trial['intensity'])
@@ -333,6 +453,22 @@ class ContrastDetectionTask:
             led_cond_this_trial = trial['led_cond']
             led_output_this_trial = self.led_cond_function_key[led_cond_this_trial]
             self.led_writer.write_many_sample(led_output_this_trial())
+        #addition by Jl 
+        #JL edits 
+        if self.random_in_blocks: 
+            
+            if self.random_stim_loc: 
+                if self.center: 
+                    dir_cond = ['center']
+                else:
+                    dir_cond = ['off_center']
+                    
+                self.trial_helper(trial,dir_cond)
+        else:
+            dir_cond = ['center', 'off_center']
+            self.trial_helper(trial, dir_cond)
+        
+            
         while trial_still_running:
 
             e=event.getKeys()
@@ -356,7 +492,9 @@ class ContrastDetectionTask:
                 print(trial['intensity'], trial['size'])
                 self.grating.setContrast(trial['intensity']/100)
                 self.grating.setSize(trial['size']*self.pix_per_deg)
-                self.present_grating()
+                preresponse = self.present_grating()
+                ##fix to getting entire response time, including within the stimulus 
+                self.trials.data.add('PreResponse', preresponse)
                 
                 
             elif current_time >= self.stim_time + self.stim_delay:

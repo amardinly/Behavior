@@ -14,15 +14,15 @@ class ContrastDetectionTask:
         #variables for file id 
         base_dir = 'C:/Users/inctel/Documents/ContrastDetectionTask/'
 
-        expInfo = {'mouse':'DQ',
+        expInfo = {'mouse':'Mfake',
         'date': datetime.datetime.today().strftime('%Y%m%d-%H_%M_%S'),
         'response_window': .5,
-        'red_gain': 0.,
-        'blue_gain': 0.,
-        'red_volts': 0.,
-        'blue_volts': 0.,
+        'red_gain': 0.0,
+        'blue_gain': 0.0,
+        'red_volts': 0.0,
+        'blue_volts': 0.0,
         'random_opto': True,
-        'bg_contrast': 0.,
+        'bg_contrast': 0.0,
         'contr_change': False,
 
         }
@@ -37,12 +37,9 @@ class ContrastDetectionTask:
 
         sizes = [20]
         intensities = {}
-
-        #ISO VS CROSS (BG CONTRAST 0.5)
-        intensities[20] = [default,3,5,10,20,100]
-        #intensities[20] = [default,3,5,10,20,100]
-        led_conds = ['none']
-
+        #default is the catch trial condition, and should always be here!
+        intensities[20] = [default,1,2,3,5,20,100]
+        led_conds = ['none','square','noise']
         #'correlated_noise'
          
         #task variables
@@ -70,7 +67,7 @@ class ContrastDetectionTask:
         expInfo['firingRate'] = 300 
         expInfo['fs'] = 5000
         expInfo['gamma_rate'] = 35 #gamma rate in hz if using gamma stims
-        expInfo['blue_delay'] = 0 #.002 #in seconds, delay from red to blue if using gamma
+        expInfo['blue_delay'] = .002 #in seconds, delay from red to blue if using gamma
 
         self.led_cond_function_key= {
             'none': self.gen_no_pulse,
@@ -173,6 +170,12 @@ class ContrastDetectionTask:
             dataFileName = self.filename,
             extraInfo = expInfo)
 
+        self.n_noise=400
+        self.all_the_noise = np.stack([self.gen_synaptic_noise_stims() for _ in range(self.n_noise)],axis=0)
+        self.curr_noise=0
+        np.savez(self.filename+'_noise_data.npz', self.all_the_noise)
+
+
         #set up the nidaq
         self.lick_daq = ni.Task()
         self.lick_daq.di_channels.add_di_chan('Dev1/Port1/Line0')
@@ -215,10 +218,12 @@ class ContrastDetectionTask:
                 #self.win.flip()
 
                 if not user_quit:
-                    user_quit, fa_times, fa_times_abs, led_times_abs = self.run_isi()
+                    user_quit, fa_times, fa_times_abs, led_times_abs,which_noise_stims = self.run_isi()
+                    self.trials.data.add('WhichNoise',which_noise_stims)
                     self.trials.data.add('FATimes',fa_times)
                     self.trials.data.add('FATimesAbs',fa_times_abs)
                     self.trials.data.add('LEDTimesAbs',led_times_abs)
+                    #self.trials.data.add('LastNoise',last_noise)
                 self.exp.nextEntry()
             print('broken out')
             self.exp.saveAsWideText(self.filename)
@@ -298,14 +303,20 @@ class ContrastDetectionTask:
 
     def present_grating(self):
         phase = 0
+        response_time=0
         for frame in range(self.stim_on_frames):
             if self.bg_contrast==0:                   
                 phase += self.phase_increment
                 self.grating.setPhase(phase)
+            if response_time==0:
+                if self.read_lick():
+                    response_time = self.trial_timer.getTime()
             self.big_grating.draw()
             self.grating.draw()
             self.text.draw()
             self.win.flip()
+        self.trials.data.add("StimEndTime",core.getTime())
+        return response_time
 
     def read_lick(self):
         lick = self.lick_daq.read()
@@ -356,7 +367,8 @@ class ContrastDetectionTask:
                 print(trial['intensity'], trial['size'])
                 self.grating.setContrast(trial['intensity']/100)
                 self.grating.setSize(trial['size']*self.pix_per_deg)
-                self.present_grating()
+                response_time = self.present_grating()
+                self.trials.data.add('PreResponse', response_time)
                 
                 
             elif current_time >= self.stim_time + self.stim_delay:
@@ -410,30 +422,36 @@ class ContrastDetectionTask:
 
         #prep led
         led_cond_next_trial = self.trials.getFutureTrial()['led_cond']
-        print(self.trials.getFutureTrial()['led_cond'], isi, rand_opto_on_time)
+        #print(self.trials.getFutureTrial()['led_cond'], isi, rand_opto_on_time)
         led_output_next_trial = self.led_cond_function_key[led_cond_next_trial]
 
         false_alarm_times = []
         false_alarm_times_abs = []
         led_on_times_abs = []
+        which_noise_stims = []
         while self.isi_timer.getTime() < isi:
             e=event.getKeys()
             if len(e)>0:
                 if e[0]=='q':
                     user_quit=True
-                    return user_quit, [],[],[]
+                    return user_quit, [],[],[],[]
             if (self.random_opto and self.isi_timer.getTime() > rand_opto_on_time and
                 self.led_daq.is_task_done()):
-                print('trying to launch led')
+                #print('trying to launch led')
                 self.led_daq.stop()
-                self.led_writer.write_many_sample(led_output_next_trial())
+                if led_cond_next_trial=='noise':
+                    self.led_writer.write_many_sample(self.all_the_noise[self.curr_noise])
+                    which_noise_stims.append(self.curr_noise)
+                    self.curr_noise+=1
+                else:
+                    self.led_writer.write_many_sample(led_output_next_trial())
                 self.led_daq.start()
                 led_on_times_abs.append(round(core.getTime(),2))
             if self.isi_timer.getTime() > self.grace_time: #if we're out of grace period
                 #check for a false alarm
                 responded = self.read_lick()
                 if responded:
-                    print('false alarm!')
+                    #print('false alarm!')
 
                     false_alarm_times.append(round(self.trial_timer.getTime(),2))
                     false_alarm_times_abs.append(round(core.getTime(),2))
@@ -443,7 +461,7 @@ class ContrastDetectionTask:
                     #self.text.text = 'false alarm! now restarting ' + str(isi) + ' countdown, opto is',led_cond_next_trial
                     #self.text.draw()
                     #self.win.flip()
-        return user_quit, false_alarm_times, false_alarm_times_abs, led_on_times_abs
+        return user_quit, false_alarm_times, false_alarm_times_abs, led_on_times_abs, which_noise_stims
 
 if __name__ == '__main__':
     ContrastDetectionTask()

@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import time
 
 #set parameters for testing
-test_voltage = 4 #goal mean power
+test_voltage = 0.4 #goal mean power
 t=5
 expInfo={}
 expInfo['alphaRise'] = .001
